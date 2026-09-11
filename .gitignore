@@ -8,3 +8,4 @@ serviceAccountKey.json
 *.json.key
 node_modules/
 dist/
+*.log
