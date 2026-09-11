@@ -169,7 +169,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = []
 
 # Firebase Admin Configuration
-FIREBASE_PROJECT_ID = os.getenv('FIREBASE_PROJECT_ID', 'ruralmed-6cf34')
+FIREBASE_PROJECT_ID = os.getenv('FIREBASE_PROJECT_ID', 'ecotrail-5a76a')
 FIREBASE_SERVICE_ACCOUNT_KEY = os.getenv('FIREBASE_SERVICE_ACCOUNT_KEY', None)
 
 MAILERS = {

@@ -8,6 +8,9 @@ class FirebaseAuthentication(authentication.BaseAuthentication):
     the Authorization header (Bearer <FIREBASE_ID_TOKEN>).
     """
 
+    def authenticate_header(self, request):
+        return 'Bearer realm="api"'
+
     def authenticate(self, request):
         auth_header = request.META.get('HTTP_AUTHORIZATION')
         if not auth_header:

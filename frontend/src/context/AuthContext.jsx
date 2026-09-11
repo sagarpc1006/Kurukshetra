@@ -20,7 +20,7 @@ export const useAuth = () => {
   return context;
 };
 
-// Map Firebase error codes to clean, friendly messages
+// Map Firebase error codes to user-friendly messages
 export const getFriendlyErrorMessage = (error) => {
   if (!error) return '';
   const code = error.code || '';
@@ -37,29 +37,26 @@ export const getFriendlyErrorMessage = (error) => {
     case 'auth/invalid-credential':
     case 'auth/invalid-login-credentials':
       return 'Incorrect email or password. Please try again.';
+    case 'auth/weak-password':
+      return 'Password should be at least 6 characters long.';
+    case 'auth/popup-closed-by-user':
+      return 'Sign-in popup was closed before completing. Please try again.';
+    case 'auth/cancelled-popup-request':
+      return 'Another sign-in window is already open. Please complete or close it.';
+    case 'auth/popup-blocked':
+      return 'Sign-in popup was blocked by your browser. Please allow popups for this site.';
+    case 'auth/unauthorized-domain':
+      return 'This domain is not authorized in Firebase Console (Authentication > Settings > Authorized domains).';
     case 'auth/too-many-requests':
-      return 'Too many failed attempts. Please try again later.';
+      return 'Too many failed attempts. Please wait a few moments and try again.';
     case 'auth/network-request-failed':
       return 'Network error. Please check your internet connection.';
+    case 'auth/api-key-not-valid':
+    case 'auth/invalid-api-key':
+      return 'Invalid Firebase API key. Please check your configuration.';
     default:
-      return error.message || 'An unexpected error occurred. Please try again.';
+      return error.message || 'Authentication failed. Please try again.';
   }
-};
-
-const getLocalUsers = () => {
-  try {
-    return JSON.parse(localStorage.getItem('ecotrail_users') || '{}');
-  } catch (e) {
-    return {};
-  }
-};
-
-const saveLocalUser = (email, userObj) => {
-  try {
-    const users = getLocalUsers();
-    users[email.toLowerCase()] = userObj;
-    localStorage.setItem('ecotrail_users', JSON.stringify(users));
-  } catch (e) {}
 };
 
 export const AuthProvider = ({ children }) => {
@@ -67,19 +64,8 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Synchronize Firebase Auth state
+  // Synchronize Firebase Auth state as the single source of truth
   useEffect(() => {
-    const savedSession = localStorage.getItem('ecotrail_session');
-    if (savedSession) {
-      try {
-        const parsed = JSON.parse(savedSession);
-        setUser(parsed.user);
-        setProfile(parsed.profile);
-      } catch (e) {
-        localStorage.removeItem('ecotrail_session');
-      }
-    }
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
@@ -88,14 +74,14 @@ export const AuthProvider = ({ children }) => {
           const userProfile = await syncFirebaseAuth(idToken);
           setProfile(userProfile);
         } catch (err) {
-          console.warn('Backend sync note:', err.message);
+          console.warn('Backend profile sync note:', err.message);
           setProfile({
             firebase_uid: firebaseUser.uid,
             email: firebaseUser.email,
             name: firebaseUser.displayName || '',
           });
         }
-      } else if (!localStorage.getItem('ecotrail_session')) {
+      } else {
         setUser(null);
         setProfile(null);
       }
@@ -105,7 +91,7 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  // Sign Up: Create a new account. If email already exists, throw explicit error!
+  // Sign Up: Create a new account using real Firebase Auth
   const signup = async (name, email, password) => {
     if (!email || !email.trim()) {
       throw new Error('Please enter your email address.');
@@ -113,77 +99,43 @@ export const AuthProvider = ({ children }) => {
     if (!password) {
       throw new Error('Please enter a password.');
     }
-
-    const cleanEmail = email.trim().toLowerCase();
-
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
-      const newUser = userCredential.user;
-
-      if (name && name.trim()) {
-        try {
-          await updateProfile(newUser, { displayName: name.trim() });
-        } catch (e) {}
-      }
-
-      let userProfile = null;
-      try {
-        const idToken = await newUser.getIdToken(true);
-        userProfile = await syncFirebaseAuth(idToken);
-      } catch (backendError) {
-        console.warn('Django sync notice:', backendError);
-        userProfile = {
-          firebase_uid: newUser.uid,
-          email: newUser.email,
-          name: name.trim() || cleanEmail.split('@')[0],
-        };
-      }
-
-      setUser(newUser);
-      setProfile(userProfile);
-      localStorage.removeItem('ecotrail_session');
-      return { user: newUser, profile: userProfile };
-    } catch (err) {
-      if (err.code === 'auth/email-already-in-use') {
-        const customErr = new Error('An account with this email already exists. Please log in.');
-        customErr.code = 'auth/email-already-in-use';
-        throw customErr;
-      }
-
-      if (err.code === 'auth/configuration-not-found') {
-        const existingUsers = getLocalUsers();
-        if (existingUsers[cleanEmail]) {
-          const customErr = new Error('An account with this email already exists. Please log in.');
-          customErr.code = 'auth/email-already-in-use';
-          throw customErr;
-        }
-
-        const mockUid = 'uid_' + Math.abs(cleanEmail.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0));
-        const fallbackUser = {
-          uid: mockUid,
-          email: cleanEmail,
-          displayName: name.trim() || cleanEmail.split('@')[0],
-          getIdToken: async () => 'mock_token_' + mockUid,
-        };
-        const fallbackProfile = {
-          id: 1,
-          firebase_uid: mockUid,
-          name: fallbackUser.displayName,
-          email: cleanEmail,
-        };
-
-        saveLocalUser(cleanEmail, { password, user: fallbackUser, profile: fallbackProfile });
-        setUser(fallbackUser);
-        setProfile(fallbackProfile);
-        localStorage.setItem('ecotrail_session', JSON.stringify({ user: fallbackUser, profile: fallbackProfile }));
-        return { user: fallbackUser, profile: fallbackProfile };
-      }
-
+    if (password.length < 6) {
+      const err = new Error('Password should be at least 6 characters long.');
+      err.code = 'auth/weak-password';
       throw err;
     }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
+    const newUser = userCredential.user;
+
+    if (name && name.trim()) {
+      try {
+        await updateProfile(newUser, { displayName: name.trim() });
+      } catch (profileErr) {
+        console.warn('Could not update display name:', profileErr);
+      }
+    }
+
+    let userProfile = null;
+    try {
+      const idToken = await newUser.getIdToken(true);
+      userProfile = await syncFirebaseAuth(idToken);
+    } catch (backendError) {
+      console.warn('Django sync note:', backendError);
+      userProfile = {
+        firebase_uid: newUser.uid,
+        email: newUser.email,
+        name: name.trim() || cleanEmail.split('@')[0],
+      };
+    }
+
+    setUser(newUser);
+    setProfile(userProfile);
+    return { user: newUser, profile: userProfile };
   };
 
-  // Log In: Authenticate existing account
+  // Log In: Authenticate existing account using real Firebase Auth
   const login = async (email, password) => {
     if (!email || !email.trim()) {
       throw new Error('Please enter your email address.');
@@ -193,84 +145,53 @@ export const AuthProvider = ({ children }) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
+    const loggedInUser = userCredential.user;
 
+    let userProfile = null;
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
-      const loggedInUser = userCredential.user;
-
-      let userProfile = null;
-      try {
-        const idToken = await loggedInUser.getIdToken();
-        userProfile = await syncFirebaseAuth(idToken);
-      } catch (backendError) {
-        console.warn('Django sync notice:', backendError);
-        userProfile = {
-          firebase_uid: loggedInUser.uid,
-          email: loggedInUser.email,
-          name: loggedInUser.displayName || cleanEmail.split('@')[0],
-        };
-      }
-
-      setUser(loggedInUser);
-      setProfile(userProfile);
-      localStorage.removeItem('ecotrail_session');
-      return { user: loggedInUser, profile: userProfile };
-    } catch (err) {
-      if (err.code === 'auth/configuration-not-found') {
-        const existingUsers = getLocalUsers();
-        const record = existingUsers[cleanEmail];
-        if (!record) {
-          const customErr = new Error('No account found with this email. Please create an account.');
-          customErr.code = 'auth/user-not-found';
-          throw customErr;
-        }
-        if (record.password !== password) {
-          const customErr = new Error('Incorrect password. Please try again.');
-          customErr.code = 'auth/wrong-password';
-          throw customErr;
-        }
-
-        setUser(record.user);
-        setProfile(record.profile);
-        localStorage.setItem('ecotrail_session', JSON.stringify({ user: record.user, profile: record.profile }));
-        return { user: record.user, profile: record.profile };
-      }
-
-      throw err;
+      const idToken = await loggedInUser.getIdToken();
+      userProfile = await syncFirebaseAuth(idToken);
+    } catch (backendError) {
+      console.warn('Django sync note:', backendError);
+      userProfile = {
+        firebase_uid: loggedInUser.uid,
+        email: loggedInUser.email,
+        name: loggedInUser.displayName || cleanEmail.split('@')[0],
+      };
     }
+
+    setUser(loggedInUser);
+    setProfile(userProfile);
+    return { user: loggedInUser, profile: userProfile };
   };
 
-  // Google Sign-in
+  // Google Sign-in using real Firebase Auth Popup
   const loginWithGoogle = async () => {
+    const result = await signInWithPopup(auth, googleProvider);
+    const googleUser = result.user;
+
+    let googleProfile = null;
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const googleUser = result.user;
-      let googleProfile = null;
-      try {
-        const idToken = await googleUser.getIdToken();
-        googleProfile = await syncFirebaseAuth(idToken);
-      } catch (e) {
-        googleProfile = {
-          firebase_uid: googleUser.uid,
-          email: googleUser.email,
-          name: googleUser.displayName || '',
-        };
-      }
-      setUser(googleUser);
-      setProfile(googleProfile);
-      return { user: googleUser, profile: googleProfile };
+      const idToken = await googleUser.getIdToken();
+      googleProfile = await syncFirebaseAuth(idToken);
     } catch (err) {
-      console.error('Google sign-in error:', err);
-      throw err;
+      console.warn('Django Google sync note:', err);
+      googleProfile = {
+        firebase_uid: googleUser.uid,
+        email: googleUser.email,
+        name: googleUser.displayName || '',
+      };
     }
+
+    setUser(googleUser);
+    setProfile(googleProfile);
+    return { user: googleUser, profile: googleProfile };
   };
 
-  // Logout
+  // Logout using real Firebase signOut
   const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (e) {}
-    localStorage.removeItem('ecotrail_session');
+    await signOut(auth);
     setUser(null);
     setProfile(null);
   };
