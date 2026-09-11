@@ -27,7 +27,7 @@ def initialize_firebase():
     """
     if not firebase_admin._apps:
         service_account_path = getattr(settings, 'FIREBASE_SERVICE_ACCOUNT_KEY', None)
-        project_id = getattr(settings, 'FIREBASE_PROJECT_ID', 'ecotrial-8b5e1')
+        project_id = getattr(settings, 'FIREBASE_PROJECT_ID', 'ecotrail-5a76a')
         client_email = getattr(settings, 'FIREBASE_CLIENT_EMAIL', '')
         private_key = getattr(settings, 'FIREBASE_PRIVATE_KEY', '')
         private_key_id = getattr(settings, 'FIREBASE_PRIVATE_KEY_ID', '')
@@ -64,7 +64,7 @@ def initialize_firebase():
 
     if 'client_app' not in firebase_admin._apps:
         try:
-            firebase_admin.initialize_app(credential=PublicTokenCredential(), options={'projectId': 'ruralmed-6cf34'}, name='client_app')
+            firebase_admin.initialize_app(credential=PublicTokenCredential(), options={'projectId': 'ecotrail-5a76a'}, name='client_app')
         except Exception as e:
             logger.debug(f"Secondary Firebase app init: {e}")
 

@@ -55,6 +55,9 @@ export const getFriendlyErrorMessage = (error) => {
     case 'auth/invalid-api-key':
       return 'Invalid Firebase API key. Please check your configuration.';
     default:
+      if (code.startsWith('auth/api-key') || code.includes('api-key-not-valid')) {
+        return 'Invalid Firebase API key. Please check your configuration.';
+      }
       return error.message || 'Authentication failed. Please try again.';
   }
 };
@@ -145,12 +148,17 @@ export const AuthProvider = ({ children }) => {
   // Helper to check if Firebase error indicates configuration/key issues
   const isFirebaseConfigError = (err) => {
     const code = err?.code || '';
+    const msg = (err?.message || '').toLowerCase();
     return (
       code === 'auth/api-key-not-valid' ||
       code === 'auth/invalid-api-key' ||
       code === 'auth/configuration-not-found' ||
       code === 'auth/internal-error' ||
       code === 'auth/network-request-failed' ||
+      code.startsWith('auth/api-key') ||
+      code.includes('api-key-not-valid') ||
+      msg.includes('api-key-not-valid') ||
+      msg.includes('invalid-api-key') ||
       !auth?.app?.options?.apiKey
     );
   };

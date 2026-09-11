@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Trips from './pages/Trips';
 import Profile from './pages/Profile';
+import Onboarding from './pages/Onboarding';
 import './styles.css';
 
 const places = [
@@ -222,16 +223,32 @@ function AuthModal({ mode, onClose }) {
         passErr.code = 'auth/weak-password';
         throw passErr;
       }
-      if (isSignup) await authSignup(name.trim(), email.trim(), password);
-      else await login(email.trim(), password);
-      onClose(); nav('/dashboard', { replace: true });
+      if (isSignup) {
+        await authSignup(name.trim(), email.trim(), password);
+        onClose();
+        nav('/onboarding', { replace: true });
+      } else {
+        await login(email.trim(), password);
+        onClose();
+        nav('/dashboard', { replace: true });
+      }
     } catch (err) { setError(getFriendlyErrorMessage(err)); }
     finally { setIsSubmitting(false); }
   };
 
   const handleGoogle = async () => {
     setError(''); setIsSubmitting(true);
-    try { await loginWithGoogle(); onClose(); nav('/dashboard', { replace: true }); }
+    try {
+      const res = await loginWithGoogle();
+      onClose();
+      const uid = res?.user?.uid;
+      const completed = uid && localStorage.getItem(`ecotrail_onboarding_completed_${uid}`);
+      if (isSignup || !completed) {
+        nav('/onboarding', { replace: true });
+      } else {
+        nav('/dashboard', { replace: true });
+      }
+    }
     catch (err) { setError(getFriendlyErrorMessage(err)); }
     finally { setIsSubmitting(false); }
   };
@@ -329,12 +346,12 @@ function Auth({signup=false}){
 
       if (signup) {
         await authSignup(name.trim(), email.trim(), password);
+        nav('/onboarding', { replace: true });
       } else {
         await login(email.trim(), password);
+        const destination = location.state?.from?.pathname || '/dashboard';
+        nav(destination, { replace: true });
       }
-      
-      const destination = location.state?.from?.pathname || '/dashboard';
-      nav(destination, { replace: true });
     } catch (err) {
       setError(getFriendlyErrorMessage(err));
     } finally {
@@ -346,9 +363,15 @@ function Auth({signup=false}){
     setError('');
     setIsSubmitting(true);
     try {
-      await loginWithGoogle();
-      const destination = location.state?.from?.pathname || '/dashboard';
-      nav(destination, { replace: true });
+      const res = await loginWithGoogle();
+      const uid = res?.user?.uid;
+      const completed = uid && localStorage.getItem(`ecotrail_onboarding_completed_${uid}`);
+      if (signup || !completed) {
+        nav('/onboarding', { replace: true });
+      } else {
+        const destination = location.state?.from?.pathname || '/dashboard';
+        nav(destination, { replace: true });
+      }
     } catch (err) {
       setError(getFriendlyErrorMessage(err));
     } finally {
@@ -554,6 +577,7 @@ function App(){
         <Route path="/signup" element={<Auth signup/>}/>
 
         {/* Protected Routes */}
+        <Route path="/onboarding" element={<ProtectedRoute><Onboarding/></ProtectedRoute>}/>
         <Route path="/dashboard" element={<ProtectedRoute><Home/></ProtectedRoute>}/>
         <Route path="/home" element={<ProtectedRoute><Home/></ProtectedRoute>}/>
         <Route path="/trips" element={<ProtectedRoute><Trips/></ProtectedRoute>}/>
