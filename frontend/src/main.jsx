@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Link, NavLink, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth, getFriendlyErrorMessage } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import './styles.css';
 
 const places = [
@@ -10,7 +12,31 @@ const places = [
 ];
 
 function Logo(){ return <Link className="logo" to="/"><span>◉</span> eco<span>trail</span></Link> }
-function Navbar(){return <header className="nav"><Logo/><nav><a href="#how">How it works</a><a href="#eco-twin">Eco-Twin</a><a href="#impact">Impact</a></nav><div className="nav-actions"><Link className="text-link" to="/login">Log in</Link><Link className="btn small" to="/signup">Start planning <b>↗</b></Link></div></header>}
+
+function Navbar(){
+  const { isAuthenticated } = useAuth();
+  return (
+    <header className="nav">
+      <Logo/>
+      <nav>
+        <a href="#how">How it works</a>
+        <a href="#eco-twin">Eco-Twin</a>
+        <a href="#impact">Impact</a>
+      </nav>
+      <div className="nav-actions">
+        {isAuthenticated ? (
+          <Link className="btn small" to="/dashboard">Dashboard <b>↗</b></Link>
+        ) : (
+          <>
+            <Link className="text-link" to="/login">Log in</Link>
+            <Link className="btn small" to="/signup">Start planning <b>↗</b></Link>
+          </>
+        )}
+      </div>
+    </header>
+  );
+}
+
 function Footer(){return <footer><Logo/><p>Better journeys leave lighter footprints.</p><div><a href="#">Privacy</a><a href="#">Help centre</a><a href="#">Instagram</a></div></footer>}
 function Pill({children}){return <span className="pill">{children}</span>}
 
@@ -25,19 +51,289 @@ function Landing(){return <><Navbar/><main className="landing">
  <section className="cta"><Pill>READY WHEN YOU ARE</Pill><h2>Travel with more<br/>intention.</h2><Link className="btn light" to="/signup">Start planning <b>↗</b></Link></section>
  </main><Footer/></>}
 
-function Auth({signup=false}){const nav=useNavigate(); return <main className="auth"><div className="auth-visual"><Logo/><div><Pill>WELCOME TO ECOTRAIL</Pill><h1>Every better<br/>journey starts<br/><i>with a choice.</i></h1><p>Find travel that works for you and the world around you.</p></div><small>● 40,000+ intentional travellers</small></div><section className="auth-form"><Link className="back" to="/">← Back to home</Link><div className="form-box"><Logo/><h2>{signup?'Create your account':'Welcome back'}</h2><p>{signup?'Start planning journeys that matter.':'Your next thoughtful journey is waiting.'}</p>{signup&&<label>Full name<input placeholder="Your name"/></label>}<label>Email address<input type="email" placeholder="you@example.com"/></label><label>Password<input type="password" placeholder="••••••••"/></label>{!signup&&<a className="forgot" href="#">Forgot password?</a>}<button className="btn full" onClick={()=>nav('/dashboard')}>{signup?'Create account':'Log in'} <b>→</b></button><div className="or">or continue with</div><div className="social"><button>G Google</button><button>● Apple</button></div><p className="switch">{signup?'Already have an account?':'New to EcoTrail?'} <Link to={signup?'/login':'/signup'}>{signup?'Log in':'Create an account'}</Link></p></div></section></main>}
+function Auth({signup=false}){
+  const nav = useNavigate();
+  const location = useLocation();
+  const { login, signup: authSignup, loginWithGoogle } = useAuth();
 
-const Side=()=> <aside className="sidebar"><Logo/><div className="side-links"><NavLink to="/dashboard">▦ Overview</NavLink><NavLink to="/planner">⌁ Plan a trip</NavLink><NavLink to="/discover">⌕ Discover</NavLink><NavLink to="/saved">♡ Saved places</NavLink></div><div className="side-bottom"><NavLink to="/profile">◎ Profile & settings</NavLink><a href="#">↪ Log out</a></div></aside>;
-function AppLayout({children}){return <div className="app-shell"><Side/><main className="app-main"><header className="app-head"><div className="search">⌕ Search journeys, places...</div><div>⌁ <span className="profile-dot">A</span></div></header>{children}</main></div>}
-function Dashboard(){return <AppLayout><section className="dash-hero"><div><Pill>THURSDAY, 11 SEPTEMBER</Pill><h1>Good morning, Aditya <i>✦</i></h1><p>Where will your next better journey take you?</p><Link className="btn" to="/planner">Plan a trip <b>↗</b></Link></div><div className="dash-art">✈<span>Mumbai</span><span>Goa</span></div></section><section className="dash-grid"><div className="section-title"><div><Pill>YOUR TRIPS</Pill><h2>Keep exploring</h2></div><Link to="/saved">View all →</Link></div><div className="trip-row"><TripCard/><div className="mini-card"><b>♧ 1,280 kg</b><span>CO₂ avoided together</span><small>That’s like growing 21 trees.</small></div><div className="mini-card"><b>★ 12 places</b><span>Saved for later</span><small>Your travel wishlist is growing.</small></div></div></section><section><div className="section-title"><div><Pill>FOR YOUR NEXT ESCAPE</Pill><h2>Made for you</h2></div><Link to="/discover">Discover more →</Link></div><div className="place-grid">{places.map(p=><Place key={p.name} p={p}/>)}</div></section></AppLayout>}
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      if (!email.trim()) throw new Error('Please enter your email address.');
+      if (!password) throw new Error('Please enter your password.');
+
+      if (signup) {
+        // Sign up: creates new account, rejects if email already exists
+        await authSignup(name.trim(), email.trim(), password);
+      } else {
+        // Log in: authenticates existing credentials
+        await login(email.trim(), password);
+      }
+      
+      const destination = location.state?.from?.pathname || '/dashboard';
+      nav(destination, { replace: true });
+    } catch (err) {
+      setError(getFriendlyErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setIsSubmitting(true);
+    try {
+      await loginWithGoogle();
+      const destination = location.state?.from?.pathname || '/dashboard';
+      nav(destination, { replace: true });
+    } catch (err) {
+      setError(getFriendlyErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <main className="auth">
+      <div className="auth-visual">
+        <Logo/>
+        <div>
+          <Pill>WELCOME TO ECOTRAIL</Pill>
+          <h1>Every better<br/>journey starts<br/><i>with a choice.</i></h1>
+          <p>Find travel that works for you and the world around you.</p>
+        </div>
+        <small>● 40,000+ intentional travellers</small>
+      </div>
+      <section className="auth-form">
+        <Link className="back" to="/">← Back to home</Link>
+        <div className="form-box">
+          <Logo/>
+          <h2>{signup ? 'Create your account' : 'Welcome back'}</h2>
+          <p>{signup ? 'Start planning journeys that matter.' : 'Your next thoughtful journey is waiting.'}</p>
+          
+          {error && <div className="auth-error">{error}</div>}
+
+          <form onSubmit={handleSubmit}>
+            {signup && (
+              <label>Full name (optional)
+                <input 
+                  type="text" 
+                  placeholder="Your name" 
+                  value={name} 
+                  onChange={(e) => setName(e.target.value)} 
+                />
+              </label>
+            )}
+            <label>Email address
+              <input 
+                type="email" 
+                placeholder="you@example.com" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                required 
+              />
+            </label>
+            <label>Password
+              <input 
+                type="password" 
+                placeholder="••••••••" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                required 
+              />
+            </label>
+            
+            <button 
+              className="btn full" 
+              type="submit" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting 
+                ? 'Please wait...' 
+                : (signup ? 'Create account' : 'Log in')} <b>→</b>
+            </button>
+          </form>
+
+          <div className="or">or continue with</div>
+          <div className="social">
+            <button type="button" onClick={handleGoogleSignIn} style={{ width: '100%' }}>
+              <b>G</b> Continue with Google
+            </button>
+          </div>
+
+          <p className="switch">
+            {signup ? 'Already have an account?' : 'New to EcoTrail?'}{' '}
+            <Link to={signup ? '/login' : '/signup'}>
+              {signup ? 'Log in' : 'Create an account'}
+            </Link>
+          </p>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+const Side = () => {
+  const { logout } = useAuth();
+  const nav = useNavigate();
+
+  const handleLogout = async (e) => {
+    e.preventDefault();
+    await logout();
+    nav('/login');
+  };
+
+  return (
+    <aside className="sidebar">
+      <Logo/>
+      <div className="side-links">
+        <NavLink to="/dashboard">▦ Overview</NavLink>
+        <NavLink to="/planner">⌁ Plan a trip</NavLink>
+        <NavLink to="/discover">⌕ Discover</NavLink>
+        <NavLink to="/saved">♡ Saved places</NavLink>
+      </div>
+      <div className="side-bottom">
+        <NavLink to="/profile">◎ Profile & settings</NavLink>
+        <a href="#logout" onClick={handleLogout}>↪ Log out</a>
+      </div>
+    </aside>
+  );
+};
+
+function AppLayout({children}){
+  const { user, profile } = useAuth();
+  const initial = (user?.displayName || profile?.name || user?.email || 'A')[0].toUpperCase();
+
+  return (
+    <div className="app-shell">
+      <Side/>
+      <main className="app-main">
+        <header className="app-head">
+          <div className="search">⌕ Search journeys, places...</div>
+          <div>⌁ <span className="profile-dot">{initial}</span></div>
+        </header>
+        {children}
+      </main>
+    </div>
+  );
+}
+
+function Dashboard(){
+  const { user, profile } = useAuth();
+  const displayName = user?.displayName || profile?.name || (user?.email ? user.email.split('@')[0] : 'Traveler');
+
+  return (
+    <AppLayout>
+      <section className="dash-hero">
+        <div>
+          <Pill>THURSDAY, 11 SEPTEMBER</Pill>
+          <h1>Good morning, {displayName} <i>✦</i></h1>
+          <p>Where will your next better journey take you?</p>
+          <Link className="btn" to="/planner">Plan a trip <b>↗</b></Link>
+        </div>
+        <div className="dash-art">✈<span>Mumbai</span><span>Goa</span></div>
+      </section>
+      <section className="dash-grid">
+        <div className="section-title">
+          <div><Pill>YOUR TRIPS</Pill><h2>Keep exploring</h2></div>
+          <Link to="/saved">View all →</Link>
+        </div>
+        <div className="trip-row">
+          <TripCard/>
+          <div className="mini-card">
+            <b>♧ 1,280 kg</b>
+            <span>CO₂ avoided together</span>
+            <small>That’s like growing 21 trees.</small>
+          </div>
+          <div className="mini-card">
+            <b>★ 12 places</b>
+            <span>Saved for later</span>
+            <small>Your travel wishlist is growing.</small>
+          </div>
+        </div>
+      </section>
+      <section>
+        <div className="section-title">
+          <div><Pill>FOR YOUR NEXT ESCAPE</Pill><h2>Made for you</h2></div>
+          <Link to="/discover">Discover more →</Link>
+        </div>
+        <div className="place-grid">{places.map(p=><Place key={p.name} p={p}/>)}</div>
+      </section>
+    </AppLayout>
+  );
+}
+
 function TripCard(){return <div className="trip-card"><div className="trip-photo"></div><div><Pill>UPCOMING · 24–28 SEP</Pill><h3>Coastal slow days in Goa</h3><p>2 travellers · Mumbai → Goa</p><div className="trip-stats"><span>♧ 46% lower CO₂</span><span>✓ All stays verified</span></div></div><b>→</b></div>}
-function Place({p}){return <Link to="/discover" className="place"><img src={p.img}/><div><Pill>{p.tag}</Pill><h3>{p.name}</h3><p>{p.type} <span>★ {p.rating}</span></p></div></Link>}
-function Planner(){const nav=useNavigate(); return <AppLayout><section className="page-top"><Pill>PLAN A JOURNEY</Pill><h1>Let's make this trip count.</h1><p>Tell us what matters to you. We’ll shape an Eco-Twin around it.</p></section><section className="planner"><div className="planner-form"><label>Where are you going?<div className="input-icon">⌖ <input placeholder="Search a destination" defaultValue="Goa, India"/></div></label><div className="two"><label>Leaving from<input defaultValue="Mumbai, India"/></label><label>Travel dates<input defaultValue="24 Sep — 28 Sep"/></label></div><label>Who’s going?<input defaultValue="2 travellers"/></label><h3>What matters most?</h3><div className="choices"><button className="selected">♧ Lower impact</button><button>♿ Accessibility</button><button>₹ Budget-friendly</button><button>☼ More comfort</button></div><button className="btn full" onClick={()=>nav('/results')}>Find my Eco-Twin <b>→</b></button></div><aside className="planning-note"><span>✦</span><h3>Travel your way.</h3><p>Your preferences help us find options that feel right — not just look good on paper.</p><ul><li>✓ Transport comparisons</li><li>✓ Verified stays</li><li>✓ Weather-aware ideas</li></ul></aside></section></AppLayout>}
+function Place({p}){return <Link to="/discover" className="place"><img src={p.img} alt={p.name}/><div><Pill>{p.tag}</Pill><h3>{p.name}</h3><p>{p.type} <span>★ {p.rating}</span></p></div></Link>}
+
+function Planner(){const nav=useNavigate(); return <AppLayout><section className="page-top"><Pill>PLAN A JOURNEY</Pill><h1>Let's make this trip count.</h1><p>Tell us what matters to you. We’ll shape an Eco-Twin around it.</p></section><section className="planner"><div className="planner-form"><label>Where are you going?<div className="input-icon">⌖ <input placeholder="Search a destination" defaultValue="Goa, India"/></div></label><div className="two"><label>Leaving from<input defaultValue="Mumbai, India"/></label><label>Travel dates<input defaultValue="24 Sep — 28 Sep"/></label></div><label>Who’s going?<input defaultValue="2 travellers"/></label><h3>What matters most?</h3><div className="choices"><button className="selected" type="button">♧ Lower impact</button><button type="button">♿ Accessibility</button><button type="button">₹ Budget-friendly</button><button type="button">☼ More comfort</button></div><button className="btn full" onClick={()=>nav('/results')}>Find my Eco-Twin <b>→</b></button></div><aside className="planning-note"><span>✦</span><h3>Travel your way.</h3><p>Your preferences help us find options that feel right — not just look good on paper.</p><ul><li>✓ Transport comparisons</li><li>✓ Verified stays</li><li>✓ Weather-aware ideas</li></ul></aside></section></AppLayout>}
 function Results(){return <AppLayout><section className="page-top compact"><Pill>MUMBAI → GOA · 24–28 SEP</Pill><h1>Your journey, <i>considered.</i></h1><p>We found options that balance your priorities beautifully.</p></section><div className="results-tabs"><button className="active">Recommended</button><button>Fastest</button><button>Lowest cost</button><button>Lowest impact</button></div><section className="results"><div><Result type="eco"/><Result type="regular"/></div><aside className="result-aside"><Pill>YOUR IMPACT</Pill><h3>Choose the Eco-Twin</h3><div className="big-number">−46%<span>less CO₂</span></div><p>Choosing train over flight saves the equivalent of 14 kg of coal burned.</p><Link className="arrow-link" to="/comparison">See full comparison →</Link></aside></section></AppLayout>}
 function Result({type}){let eco=type==='eco'; return <article className={'result '+type}><div className="result-img"></div><div className="result-content"><Pill>{eco?'ECOTRAIL PICK':'REGULAR OPTION'}</Pill><h2>{eco?'Konkan Railway':'Direct flight'}</h2><p>{eco?'Mumbai CSMT → Madgaon · Overnight':'Mumbai → Goa · 1h 20m'}</p><div className="result-details"><span>◷ {eco?'10h 45m':'3h 40m'}</span><span>₹ {eco?'1,280':'5,180'}</span><span>♧ {eco?'35':'130'} kg CO₂</span></div>{eco&&<div className="verified">✓ Accessibility & hygiene details verified</div>}</div><button>⌄</button></article>}
 function Comparison(){return <AppLayout><section className="page-top compact"><Pill>YOUR ECO-TWIN</Pill><h1>Same destination.<br/><i>Better way to get there.</i></h1></section><section className="compare"><div className="compare-head"><div>✈ <b>Regular trip</b><span>Direct flight</span></div><div className="eco-head">♧ <b>Eco-Twin</b><span>Konkan Railway</span></div></div>{[['Carbon emissions','130 kg CO₂','35 kg CO₂','73% lower'],['Total cost','₹5,180','₹1,280','₹3,900 saved'],['Travel time','3h 40m','10h 45m','+7h 05m'],['Comfort','Standard seat','Sleeper cabin','More room'],['Accessibility','Limited info','Verified access','Checked for you']].map(x=><div className="compare-row" key={x[0]}><span>{x[0]}</span><b>{x[1]}</b><b className="green">{x[2]} <small>{x[3]}</small></b></div>)}</section><div className="compare-cta"><span>♧</span><div><b>Your Eco-Twin saves 95 kg of CO₂</b><p>That's the clearest route to a lighter journey.</p></div><Link className="btn" to="/saved">Save this trip <b>→</b></Link></div></AppLayout>}
 function Discover(){return <AppLayout><section className="discover-title"><Pill>EXPLORE MINDFULLY</Pill><h1>Places that give back.</h1><p>Find inspiring destinations with lighter footprints and richer experiences.</p><div className="discover-search">⌕ <input placeholder="Where do you want to go?"/><button>Search</button></div></section><div className="filters"><button className="active">For you</button><button>Nature</button><button>Culture</button><button>Beach</button><button>Weekend escape</button><button>♿ Accessible</button></div><div className="place-grid large">{places.concat(places).map((p,i)=><Place key={i} p={{...p,name:i>2?['Alleppey','Spiti','Pondicherry'][i-3]:p.name}}/>)}</div></AppLayout>}
 function Saved(){return <AppLayout><section className="page-top compact"><Pill>YOUR COLLECTION</Pill><h1>Saved for <i>some day.</i></h1><p>All the little possibilities waiting for the right moment.</p></section><div className="saved-tabs"><button className="active">Trips (2)</button><button>Places (12)</button></div><div className="saved-list"><TripCard/><TripCard/></div></AppLayout>}
-function Profile(){return <AppLayout><section className="page-top compact"><Pill>YOUR ACCOUNT</Pill><h1>Profile & preferences</h1><p>Keep your travel experience personal, practical and thoughtful.</p></section><section className="profile-page"><div className="profile-card"><div className="avatar">A</div><div><h2>Aditya Kadam</h2><p>aditya@example.com</p></div><button>Edit profile</button></div><div className="settings"><div><h3>Travel preferences</h3><p>Low impact · Comfort · Train travel</p></div><button>Manage →</button><div><h3>Accessibility needs</h3><p>No preferences added yet</p></div><button>Manage →</button><div><h3>Notifications</h3><p>Trip updates and tailored ideas</p></div><button>Manage →</button></div></section></AppLayout>}
-function App(){return <Routes><Route path="/" element={<Landing/>}/><Route path="/login" element={<Auth/>}/><Route path="/signup" element={<Auth signup/>}/><Route path="/dashboard" element={<Dashboard/>}/><Route path="/planner" element={<Planner/>}/><Route path="/results" element={<Results/>}/><Route path="/comparison" element={<Comparison/>}/><Route path="/discover" element={<Discover/>}/><Route path="/saved" element={<Saved/>}/><Route path="/profile" element={<Profile/>}/></Routes>};
+
+function Profile(){
+  const { user, profile } = useAuth();
+  const displayName = user?.displayName || profile?.name || 'EcoTrail Traveler';
+  const email = user?.email || profile?.email || '';
+  const initial = (displayName || email || 'A')[0].toUpperCase();
+
+  return (
+    <AppLayout>
+      <section className="page-top compact">
+        <Pill>YOUR ACCOUNT</Pill>
+        <h1>Profile & preferences</h1>
+        <p>Keep your travel experience personal, practical and thoughtful.</p>
+      </section>
+      <section className="profile-page">
+        <div className="profile-card">
+          <div className="avatar">{initial}</div>
+          <div>
+            <h2>{displayName}</h2>
+            <p>{email}</p>
+          </div>
+          <button>Edit profile</button>
+        </div>
+        <div className="settings">
+          <div><h3>Travel preferences</h3><p>Low impact · Comfort · Train travel</p></div><button>Manage →</button>
+          <div><h3>Accessibility needs</h3><p>No preferences added yet</p></div><button>Manage →</button>
+          <div><h3>Notifications</h3><p>Trip updates and tailored ideas</p></div><button>Manage →</button>
+        </div>
+      </section>
+    </AppLayout>
+  );
+}
+
+function App(){
+  return (
+    <AuthProvider>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Landing/>}/>
+        <Route path="/login" element={<Auth/>}/>
+        <Route path="/signup" element={<Auth signup/>}/>
+
+        {/* Protected Routes */}
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard/></ProtectedRoute>}/>
+        <Route path="/planner" element={<ProtectedRoute><Planner/></ProtectedRoute>}/>
+        <Route path="/results" element={<ProtectedRoute><Results/></ProtectedRoute>}/>
+        <Route path="/comparison" element={<ProtectedRoute><Comparison/></ProtectedRoute>}/>
+        <Route path="/discover" element={<ProtectedRoute><Discover/></ProtectedRoute>}/>
+        <Route path="/saved" element={<ProtectedRoute><Saved/></ProtectedRoute>}/>
+        <Route path="/profile" element={<ProtectedRoute><Profile/></ProtectedRoute>}/>
+      </Routes>
+    </AuthProvider>
+  );
+}
+
 createRoot(document.getElementById('root')).render(<BrowserRouter><App/></BrowserRouter>);

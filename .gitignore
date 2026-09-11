@@ -1,0 +1,10 @@
+*.env
+.env
+.env.local
+*.pyc
+__pycache__/
+db.sqlite3
+serviceAccountKey.json
+*.json.key
+node_modules/
+dist/
