@@ -35,6 +35,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'myapp',
+    'chat',
+    'travel',
+    'recommendations',
+    'accessibility',
+    'trips',
 ]
 
 MIDDLEWARE = [
@@ -129,6 +134,10 @@ REST_FRAMEWORK = {
 # CORS Configuration
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+]
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -139,6 +148,7 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'x-client-id',
 ]
 
 
@@ -168,9 +178,26 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = []
 
+# Media files (Uploaded photos for accessibility verification)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Gemini & Groq AI Configuration
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+
+# External Travel Data API Tokens
+DUFFEL_API_TOKEN = os.getenv('DUFFEL_API_TOKEN', '')
+ORS_API_KEY = os.getenv('ORS_API_KEY', '')
+OPENTRIPMAP_API_KEY = os.getenv('OPENTRIPMAP_API_KEY', '')
+OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '')
+
 # Firebase Admin Configuration
-FIREBASE_PROJECT_ID = os.getenv('FIREBASE_PROJECT_ID', 'ruralmed-6cf34')
+FIREBASE_PROJECT_ID = os.getenv('FIREBASE_PROJECT_ID', 'ecotrial-8b5e1')
 FIREBASE_SERVICE_ACCOUNT_KEY = os.getenv('FIREBASE_SERVICE_ACCOUNT_KEY', None)
+FIREBASE_CLIENT_EMAIL = os.getenv('FIREBASE_CLIENT_EMAIL', '')
+FIREBASE_PRIVATE_KEY = os.getenv('FIREBASE_PRIVATE_KEY', '')
+FIREBASE_PRIVATE_KEY_ID = os.getenv('FIREBASE_PRIVATE_KEY_ID', '')
 
 MAILERS = {
     'default': {

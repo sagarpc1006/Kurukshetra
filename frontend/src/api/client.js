@@ -14,12 +14,26 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const currentUser = auth.currentUser;
+      if (auth && typeof auth.authStateReady === 'function') {
+        await auth.authStateReady();
+      }
+      const currentUser = auth?.currentUser;
       if (currentUser && typeof currentUser.getIdToken === 'function') {
         const token = await currentUser.getIdToken();
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
+          return config;
         }
+      }
+      const saved = localStorage.getItem('ecotrail_session');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const uid = parsed?.user?.uid;
+          if (uid) {
+            config.headers.Authorization = `Bearer mock_token_${uid}`;
+          }
+        } catch (e) {}
       }
     } catch (error) {
       console.error('Error fetching Firebase ID token for request:', error);

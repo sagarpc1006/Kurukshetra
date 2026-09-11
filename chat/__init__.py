@@ -1,0 +1,1 @@
+# EcoTrail Chat Application Module

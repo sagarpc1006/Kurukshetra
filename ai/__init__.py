@@ -1,0 +1,1 @@
+# EcoTrail AI Module

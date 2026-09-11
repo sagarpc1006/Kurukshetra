@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, NavLink, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth, getFriendlyErrorMessage } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import Home from './pages/Home';
+import Trips from './pages/Trips';
+import Profile from './pages/Profile';
 import './styles.css';
 
 const places = [
@@ -282,37 +285,6 @@ function Comparison(){return <AppLayout><section className="page-top compact"><P
 function Discover(){return <AppLayout><section className="discover-title"><Pill>EXPLORE MINDFULLY</Pill><h1>Places that give back.</h1><p>Find inspiring destinations with lighter footprints and richer experiences.</p><div className="discover-search">⌕ <input placeholder="Where do you want to go?"/><button>Search</button></div></section><div className="filters"><button className="active">For you</button><button>Nature</button><button>Culture</button><button>Beach</button><button>Weekend escape</button><button>♿ Accessible</button></div><div className="place-grid large">{places.concat(places).map((p,i)=><Place key={i} p={{...p,name:i>2?['Alleppey','Spiti','Pondicherry'][i-3]:p.name}}/>)}</div></AppLayout>}
 function Saved(){return <AppLayout><section className="page-top compact"><Pill>YOUR COLLECTION</Pill><h1>Saved for <i>some day.</i></h1><p>All the little possibilities waiting for the right moment.</p></section><div className="saved-tabs"><button className="active">Trips (2)</button><button>Places (12)</button></div><div className="saved-list"><TripCard/><TripCard/></div></AppLayout>}
 
-function Profile(){
-  const { user, profile } = useAuth();
-  const displayName = user?.displayName || profile?.name || 'EcoTrail Traveler';
-  const email = user?.email || profile?.email || '';
-  const initial = (displayName || email || 'A')[0].toUpperCase();
-
-  return (
-    <AppLayout>
-      <section className="page-top compact">
-        <Pill>YOUR ACCOUNT</Pill>
-        <h1>Profile & preferences</h1>
-        <p>Keep your travel experience personal, practical and thoughtful.</p>
-      </section>
-      <section className="profile-page">
-        <div className="profile-card">
-          <div className="avatar">{initial}</div>
-          <div>
-            <h2>{displayName}</h2>
-            <p>{email}</p>
-          </div>
-          <button>Edit profile</button>
-        </div>
-        <div className="settings">
-          <div><h3>Travel preferences</h3><p>Low impact · Comfort · Train travel</p></div><button>Manage →</button>
-          <div><h3>Accessibility needs</h3><p>No preferences added yet</p></div><button>Manage →</button>
-          <div><h3>Notifications</h3><p>Trip updates and tailored ideas</p></div><button>Manage →</button>
-        </div>
-      </section>
-    </AppLayout>
-  );
-}
 
 function App(){
   return (
@@ -324,13 +296,15 @@ function App(){
         <Route path="/signup" element={<Auth signup/>}/>
 
         {/* Protected Routes */}
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard/></ProtectedRoute>}/>
+        <Route path="/dashboard" element={<ProtectedRoute><Home/></ProtectedRoute>}/>
+        <Route path="/home" element={<ProtectedRoute><Home/></ProtectedRoute>}/>
+        <Route path="/trips" element={<ProtectedRoute><Trips/></ProtectedRoute>}/>
+        <Route path="/saved" element={<ProtectedRoute><Trips/></ProtectedRoute>}/>
+        <Route path="/profile" element={<ProtectedRoute><Profile/></ProtectedRoute>}/>
         <Route path="/planner" element={<ProtectedRoute><Planner/></ProtectedRoute>}/>
         <Route path="/results" element={<ProtectedRoute><Results/></ProtectedRoute>}/>
         <Route path="/comparison" element={<ProtectedRoute><Comparison/></ProtectedRoute>}/>
         <Route path="/discover" element={<ProtectedRoute><Discover/></ProtectedRoute>}/>
-        <Route path="/saved" element={<ProtectedRoute><Saved/></ProtectedRoute>}/>
-        <Route path="/profile" element={<ProtectedRoute><Profile/></ProtectedRoute>}/>
       </Routes>
     </AuthProvider>
   );
