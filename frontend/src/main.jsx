@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, NavLink, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth, getFriendlyErrorMessage } from './context/AuthContext';
@@ -57,7 +57,7 @@ function Landing(){return <><Navbar/><main className="landing">
 function Auth({signup=false}){
   const nav = useNavigate();
   const location = useLocation();
-  const { login, signup: authSignup, loginWithGoogle } = useAuth();
+  const { login, signup: authSignup, loginWithGoogle, isAuthenticated } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -65,20 +65,31 @@ function Auth({signup=false}){
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      const destination = location.state?.from?.pathname || '/dashboard';
+      nav(destination, { replace: true });
+    }
+  }, [isAuthenticated, nav, location]);
+
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     setError('');
-    setIsSubmitting(true);
 
     try {
       if (!email.trim()) throw new Error('Please enter your email address.');
       if (!password) throw new Error('Please enter your password.');
+      if (signup && password.length < 6) {
+        const passErr = new Error('Password should be at least 6 characters long.');
+        passErr.code = 'auth/weak-password';
+        throw passErr;
+      }
+
+      setIsSubmitting(true);
 
       if (signup) {
-        // Sign up: creates new account, rejects if email already exists
         await authSignup(name.trim(), email.trim(), password);
       } else {
-        // Log in: authenticates existing credentials
         await login(email.trim(), password);
       }
       

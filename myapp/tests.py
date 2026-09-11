@@ -74,3 +74,20 @@ class FirebaseAuthAPITests(TestCase):
 
         profile = UserProfile.objects.get(firebase_uid='fb_uid_888')
         self.assertEqual(profile.name, 'Updated Name')
+
+    def test_current_user_profile_unauthorized(self):
+        response = self.client.get('/api/auth/me/')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @patch('myapp.authentication.verify_firebase_token')
+    def test_current_user_profile_authorized(self, mock_verify):
+        mock_verify.return_value = {
+            'uid': 'fb_uid_me_123',
+            'email': 'me@example.com',
+            'name': 'Me User'
+        }
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer valid_mock_token')
+        response = self.client.get('/api/auth/me/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['email'], 'me@example.com')
+        self.assertEqual(response.data['firebase_uid'], 'fb_uid_me_123')

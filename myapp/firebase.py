@@ -3,8 +3,20 @@ import logging
 import firebase_admin
 from firebase_admin import auth, credentials
 from django.conf import settings
+from google.auth.credentials import AnonymousCredentials
 
 logger = logging.getLogger(__name__)
+
+class PublicTokenCredential(credentials.Base):
+    """
+    Credential provider that returns AnonymousCredentials.
+    Prevents google.auth.default() from hanging on local/non-GCP environments
+    by pinging the unreachable GCP metadata service (169.254.169.254) for 12 seconds.
+    Firebase ID token verification only requires public Google x509 certs,
+    not server-side private credentials.
+    """
+    def get_credential(self):
+        return AnonymousCredentials()
 
 def initialize_firebase():
     """
@@ -47,12 +59,12 @@ def initialize_firebase():
             logger.info(f"Firebase Admin initialized with certificate for project {project_id}")
         else:
             options = {'projectId': project_id} if project_id else {}
-            firebase_admin.initialize_app(options=options)
-            logger.info(f"Firebase Admin initialized with projectId options {project_id}")
+            firebase_admin.initialize_app(credential=PublicTokenCredential(), options=options)
+            logger.info(f"Firebase Admin initialized with PublicTokenCredential for project {project_id}")
 
     if 'client_app' not in firebase_admin._apps:
         try:
-            firebase_admin.initialize_app(options={'projectId': 'ruralmed-6cf34'}, name='client_app')
+            firebase_admin.initialize_app(credential=PublicTokenCredential(), options={'projectId': 'ruralmed-6cf34'}, name='client_app')
         except Exception as e:
             logger.debug(f"Secondary Firebase app init: {e}")
 

@@ -16,18 +16,34 @@ def index(request):
 def firebase_auth_sync(request):
     """
     POST /api/auth/firebase/
-    Payload: {"id_token": "<FIREBASE_ID_TOKEN>"}
+    Payload: {"id_token": "<FIREBASE_ID_TOKEN>"} or Authorization: Bearer <ID_TOKEN>
 
-    1. Receives Firebase ID token.
-    2. Verifies it using Firebase Admin SDK.
-    3. Extracts uid, email, name, picture.
-    4. Finds or creates corresponding UserProfile in PostgreSQL.
-    5. Returns application user info.
+    1. Checks if request.user is already authenticated by FirebaseAuthentication.
+    2. Receives and verifies Firebase ID token using Firebase Admin / public certs.
+    3. Finds or creates corresponding UserProfile in database.
+    4. Returns application user info.
     """
+    # If already authenticated by FirebaseAuthentication via Bearer token in header
+    if hasattr(request, 'user') and isinstance(request.user, UserProfile) and request.user.is_authenticated:
+        return Response({
+            "id": request.user.id,
+            "firebase_uid": request.user.firebase_uid,
+            "name": request.user.name,
+            "email": request.user.email,
+            "created_at": request.user.created_at,
+            "updated_at": request.user.updated_at,
+        }, status=status.HTTP_200_OK)
+
     id_token = request.data.get('id_token')
+    if not id_token:
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        parts = auth_header.split()
+        if len(parts) == 2 and parts[0].lower() == 'bearer':
+            id_token = parts[1]
+
     if not id_token or not isinstance(id_token, str) or not id_token.strip():
         return Response(
-            {"error": "id_token is required in request body."},
+            {"error": "id_token is required in request body or Authorization header."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
