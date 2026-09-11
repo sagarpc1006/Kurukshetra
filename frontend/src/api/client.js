@@ -30,8 +30,10 @@ apiClient.interceptors.request.use(
         try {
           const parsed = JSON.parse(saved);
           const uid = parsed?.user?.uid;
+          const email = parsed?.user?.email || '';
+          const name = parsed?.user?.displayName || parsed?.profile?.name || '';
           if (uid) {
-            config.headers.Authorization = `Bearer mock_token_${uid}`;
+            config.headers.Authorization = `Bearer mock_token_${uid}:${email}:${name}`;
           }
         } catch (e) {}
       }

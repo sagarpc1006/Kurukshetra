@@ -85,14 +85,17 @@ def verify_firebase_token(id_token: str) -> dict:
 
     # Development/Testing mock token fallback when DEBUG is True
     if getattr(settings, 'DEBUG', False) and (token_str.startswith('mock_token_') or token_str.startswith('dev_token_') or token_str == 'demo_token'):
-        parts = token_str.split('_', 2)
-        dev_uid = parts[-1] if len(parts) > 1 else 'demo_traveler_123'
+        payload_str = token_str.replace('mock_token_', '').replace('dev_token_', '')
+        parts = payload_str.split(':')
+        dev_uid = parts[0] if parts[0] else 'demo_traveler_123'
+        dev_email = parts[1] if len(parts) > 1 else f"{dev_uid}@ecotrail.test"
+        dev_name = parts[2] if len(parts) > 2 else dev_email.split('@')[0].capitalize()
         return {
             'uid': dev_uid,
             'user_id': dev_uid,
-            'email': f"{dev_uid}@ecotrail.test",
-            'name': 'Demo Traveler',
-            'display_name': 'Demo Traveler',
+            'email': dev_email,
+            'name': dev_name,
+            'display_name': dev_name,
             'picture': '',
         }
 

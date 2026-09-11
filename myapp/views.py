@@ -37,7 +37,7 @@ def firebase_auth_sync(request):
     id_token = request.data.get('id_token')
     if not id_token:
         auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-        parts = auth_header.split()
+        parts = auth_header.split(None, 1)
         if len(parts) == 2 and parts[0].lower() == 'bearer':
             id_token = parts[1]
 

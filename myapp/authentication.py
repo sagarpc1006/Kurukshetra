@@ -24,7 +24,7 @@ class FirebaseAuthentication(authentication.BaseAuthentication):
         if not auth_header:
             return None
 
-        parts = auth_header.split()
+        parts = auth_header.split(None, 1)
         if len(parts) == 0:
             return None
 
