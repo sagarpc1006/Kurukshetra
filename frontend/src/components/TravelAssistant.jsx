@@ -267,6 +267,64 @@ export default function TravelAssistant({ onTripSaved, externalPrompt }) {
       if (data && data.success) {
         setResultData(data);
         setSearchState('success');
+
+        // Automatically persist to Gemini AI Chat Consultations in localStorage
+        try {
+          const intent = data.intent || {};
+          const dest = intent.destination || '';
+          const orig = intent.origin || '';
+          const topRec = data.recommendations?.results?.[0] || {};
+          const ecoTwin = data.eco_twin || {};
+          const dur = intent.duration_days ? `${intent.duration_days} days` : '3 days';
+
+          // Resolve photo thumbnail based on query/destination
+          const queryLower = (dest + ' ' + query).toLowerCase();
+          let thumbnail = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=500&q=80';
+          if (queryLower.includes('goa')) thumbnail = 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=500&auto=format&fit=crop&q=80';
+          else if (queryLower.includes('tirupati')) thumbnail = 'https://images.unsplash.com/photo-1599661046827-dacff0c0f09a?auto=format&fit=crop&w=500&q=80';
+          else if (queryLower.includes('munnar') || queryLower.includes('kerala')) thumbnail = 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=500&q=80';
+          else if (queryLower.includes('coorg')) thumbnail = 'https://images.unsplash.com/photo-1588714477688-cf28a50e94f7?auto=format&fit=crop&w=500&q=80';
+          else if (queryLower.includes('hampi')) thumbnail = 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=500&q=80';
+          else if (queryLower.includes('jaipur') || queryLower.includes('rajasthan')) thumbnail = 'https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=500&q=80';
+          else if (queryLower.includes('kashmir') || queryLower.includes('srinagar')) thumbnail = 'https://images.unsplash.com/photo-1598091383021-15ddea10925d?auto=format&fit=crop&w=500&q=80';
+          else if (queryLower.includes('varanasi')) thumbnail = 'https://images.unsplash.com/photo-1561361513-2d000a50f0dc?auto=format&fit=crop&w=500&q=80';
+
+          const routeStr = (orig && dest) ? `${orig} → ${dest}` : (dest ? `Route to ${dest}` : 'Curated Eco Route');
+          const now = new Date();
+          const dateStr = now.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }).toUpperCase() + ' · ' + now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+          const newChatEntry = {
+            id: 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            query: query,
+            title: data.itinerary?.title || (dest ? `${dur} in ${dest}` : (query.length > 45 ? query.slice(0, 45) + '...' : query)),
+            origin: orig,
+            destination: dest,
+            route: routeStr,
+            travellers: '2 travellers',
+            dates: intent.travel_dates || `${dur.toUpperCase()}`,
+            ecoScore: topRec.green_accessible_score || 92,
+            carbonSaved: ecoTwin?.comparison?.carbon_saved_kg ? `${Math.round(ecoTwin.comparison.carbon_saved_kg)} kg lower CO₂` : '46% lower CO₂',
+            savedPercent: topRec.carbon?.kg_co2e ? `${Math.round(Math.max(35, Math.min(85, (1 - (topRec.carbon.kg_co2e / 120)) * 100)))}%` : '46%',
+            timestamp: now.toISOString(),
+            dateStr: dateStr,
+            model: 'Gemini 2.5 Flash',
+            img: thumbnail,
+            response: data.ai_response || data.response || data.message || '',
+            officialLinks: data.official_links || [],
+            itinerary: data.itinerary || null,
+          };
+
+          const rawHistory = localStorage.getItem('ecotrail_ai_chat_history');
+          let parsedHistory = [];
+          if (rawHistory) {
+            try { parsedHistory = JSON.parse(rawHistory); } catch (e) {}
+          }
+          const updatedHistory = [newChatEntry, ...parsedHistory.filter(item => item.query !== query).slice(0, 49)];
+          localStorage.setItem('ecotrail_ai_chat_history', JSON.stringify(updatedHistory));
+          window.dispatchEvent(new CustomEvent('ecotrail_chat_saved', { detail: newChatEntry }));
+        } catch (storageErr) {
+          console.warn('Could not update AI chat history:', storageErr);
+        }
       } else {
         setErrorMessage(data?.message || 'Something went wrong. Please try again.');
         setSearchState('error');
@@ -346,6 +404,7 @@ export default function TravelAssistant({ onTripSaved, externalPrompt }) {
       if (res.success) {
         setSaveStatus('saved');
         setSaveMessage('Journey successfully saved to your collection in PostgreSQL!');
+        window.dispatchEvent(new CustomEvent('ecotrail_trip_saved', { detail: res.trip }));
         if (onTripSaved) onTripSaved(res.trip);
       } else {
         setSaveStatus('error');
@@ -469,9 +528,19 @@ export default function TravelAssistant({ onTripSaved, externalPrompt }) {
             <div className="assistant-bubble-content">
               <div className="assistant-bubble-header">
                 <strong>EcoTrail AI Assistant</strong>
-                <span className="live-realtime-pill">
-                  <span className="live-beacon-dot"></span> Live Real-Time AI · Verified Links
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="live-realtime-pill">
+                    <span className="live-beacon-dot"></span> Live Real-Time AI · Verified Links
+                  </span>
+                  <Link
+                    to="/saved?tab=ai_chats"
+                    className="live-realtime-pill"
+                    style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#047857', border: '1px solid rgba(16, 185, 129, 0.3)', textDecoration: 'none', fontWeight: 600 }}
+                    title="View in Saved Places Collection"
+                  >
+                    ✦ Saved to History
+                  </Link>
+                </div>
               </div>
               <FormattedAiResponse text={resultData.ai_response || resultData.message} />
             </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, NavLink, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Link, NavLink, Route, Routes, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { AuthProvider, useAuth, getFriendlyErrorMessage } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
@@ -626,10 +626,10 @@ function Dashboard(){
   );
 }
 
-function TripCard({ title = 'Coastal slow days in Goa', route = 'Mumbai → Goa', dates = '24–28 SEP', savedPercent = '46%' } = {}) {
+function TripCard({ title = 'Coastal slow days in Goa', route = 'Mumbai → Goa', dates = '24–28 SEP', savedPercent = '46%', img } = {}) {
   return (
     <div className="trip-card">
-      <div className="trip-photo"></div>
+      <div className="trip-photo" style={img ? { backgroundImage: `url('${img}')` } : {}}></div>
       <div>
         <Pill>UPCOMING · {dates}</Pill>
         <h3>{title}</h3>
@@ -872,8 +872,234 @@ function Comparison() {
   );
 }
 
+const DEFAULT_AI_CHAT_HISTORY = [
+  {
+    id: 'chat_default_goa',
+    query: 'Plan a 3-day slow sustainable trip to Goa via Konkan electric train with verified solar stays and beaches',
+    title: 'Coastal slow days in Goa',
+    origin: 'Mumbai',
+    destination: 'Goa',
+    route: 'Mumbai → Goa',
+    travellers: '2 travellers',
+    dates: '24–28 SEP',
+    ecoScore: 92,
+    savedPercent: '46%',
+    carbonSaved: '46% lower CO₂',
+    timestamp: '2026-09-12T08:30:00.000Z',
+    dateStr: '12 SEP · 8:30 AM',
+    model: 'Gemini 2.5 Flash',
+    img: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=500&auto=format&fit=crop&q=80',
+    response: `Here is your verified low-carbon itinerary for Goa:
+
+### 🚆 Green Rail Transit
+• Vande Bharat Express (Train #22229) from Mumbai CSMT to Madgaon Junction — 100% electrified rail with 73% lower CO₂ than regional flights.
+• Zero-emission EV auto-rickshaws and rental pedal cycles available at Madgaon & Thivim stations.
+
+### 🌿 Sustainable Certified Homestays
+• Solar-powered beach eco-cottages in South Goa (Agonda & Palolem) with verified rainwater harvesting and greywater filtration.
+• Organic farm-to-table breakfast sourcing 100% produce from local Goan agro-cooperatives.
+
+### 🏖️ Heritage & Leave-No-Trace Exploration
+• Guided architectural walk through Fontainhas Latin Quarter with certified heritage docents.
+• Quiet beach trail to Galgibaga Turtle Sanctuary strictly complying with coastal ecological regulations.`,
+    officialLinks: [
+      {
+        name: 'IRCTC Tourism - Konkan Rail Tour Packages',
+        domain: 'irctctourism.com',
+        category: 'Train & Official Tour',
+        is_package: true,
+        badge: 'Govt Package',
+        description: 'Official Indian Railways tour package with confirmed electric sleeper seats and station transfers.',
+        url: 'https://www.irctctourism.com/'
+      },
+      {
+        name: 'Goa Tourism Official Portal (GTDC)',
+        domain: 'goa-tourism.com',
+        category: 'Official State Tourism',
+        is_package: false,
+        badge: 'Govt Verified',
+        description: 'Direct government hotel bookings, eco-trail registrations, and verified local water sports operators.',
+        url: 'https://goa-tourism.com/'
+      }
+    ]
+  },
+  {
+    id: 'chat_default_tirupati',
+    query: 'Heritage and temple walk in Tirupati with electric bus transit, verified darshan package, and solar lodging',
+    title: 'Heritage and temple walk',
+    origin: 'Pune',
+    destination: 'Tirupati',
+    route: 'Pune → Tirupati',
+    travellers: '2 travellers',
+    dates: '12–15 OCT',
+    ecoScore: 95,
+    savedPercent: '72%',
+    carbonSaved: '72% lower CO₂',
+    timestamp: '2026-09-11T14:15:00.000Z',
+    dateStr: '11 SEP · 2:15 PM',
+    model: 'Gemini 2.5 Flash',
+    img: 'https://images.unsplash.com/photo-1599661046827-dacff0c0f09a?auto=format&fit=crop&w=500&q=80',
+    response: `Here is your verified low-impact spiritual journey for Tirupati:
+
+### ⚡ Zero-Emission Transit Corridor
+• Electric rail connection from Pune Junction to Renigunta / Tirupati Main.
+• Tirupati Smart City 100% Electric Bus Shuttle running continuously from the railway station to Alipiri and Tirumala hilltop.
+
+### 🏛️ Verified Official Darshan & Accessibility
+• Special Entry Darshan (₹300) directly reserved on the official Tirumala Tirupati Devasthanams (TTD) portal.
+• Wheelchair ramps and priority senior/accessible assistance verified at Vaikuntam Queue Complex.
+
+### 🌿 Solar Lodging
+• Sri Padmavathi Guest House and solar-powered TTD cottage allotments equipped with solar water heaters and LED microgrids.`,
+    officialLinks: [
+      {
+        name: 'Tirumala Tirupati Devasthanams (TTD) Official Portal',
+        domain: 'ttdevasthanams.ap.gov.in',
+        category: 'Official Darshan Booking',
+        is_package: true,
+        badge: 'Govt Portal',
+        description: 'Direct official darshan ticket booking, laddu prasadam tokens, and accommodation with zero broker fees.',
+        url: 'https://ttdevasthanams.ap.gov.in/'
+      },
+      {
+        name: 'IRCTC Temple Tourism Packages',
+        domain: 'irctctourism.com',
+        category: 'Official Rail Tour Package',
+        is_package: true,
+        badge: 'Govt Package',
+        description: 'All-inclusive divine packages with train fare, AC accommodation, and guaranteed darshan access.',
+        url: 'https://www.irctctourism.com/tourpckage_search?searchKey=tirupati'
+      }
+    ]
+  },
+  {
+    id: 'chat_default_munnar',
+    query: 'Munnar tea sanctuary retreat with EV corridor transit, organic estate stays, and walking trails',
+    title: 'Western Ghats Tea Sanctuary',
+    origin: 'Kochi',
+    destination: 'Munnar',
+    route: 'Kochi → Munnar',
+    travellers: '2 travellers',
+    dates: '05–09 NOV',
+    ecoScore: 94,
+    savedPercent: '58%',
+    carbonSaved: '58% lower CO₂',
+    timestamp: '2026-09-10T11:00:00.000Z',
+    dateStr: '10 SEP · 11:00 AM',
+    model: 'Gemini 2.5 Flash',
+    img: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=500&q=80',
+    response: `Here is your high-altitude biodiversity retreat for Munnar:
+
+### 🌿 Western Ghats EV Corridor
+• Electric cab connection from Aluva Railway Station along NH85 with 3 certified fast-charging points.
+• Guided tea garden walking trails minimizing local vehicle usage and emissions.
+
+### 🍵 Organic Agro-Tourism
+• Low-impact stone cottages at certified organic tea plantations with rainwater catchment and biomass compost heating.
+• Eravikulam National Park Nilgiri Tahr conservation booking directly via Kerala Forest Department.`,
+    officialLinks: [
+      {
+        name: 'Kerala Tourism Official Portal',
+        domain: 'keralatourism.org',
+        category: 'Official State Tourism',
+        is_package: false,
+        badge: 'Govt Verified',
+        description: 'Official information on responsible tourism initiatives, eco-homestays, and plantation visits.',
+        url: 'https://www.keralatourism.org/'
+      },
+      {
+        name: 'KTDC Official Eco-Resorts',
+        domain: 'ktdc.com',
+        category: 'State Tourism Hotels',
+        is_package: true,
+        badge: 'Govt Package',
+        description: 'State government properties (Tea County Munnar) with sustainable waste handling.',
+        url: 'https://www.ktdc.com/'
+      }
+    ]
+  }
+];
+
 function Saved() {
-  const [activeTab, setActiveTab] = useState('trips'); // 'trips' | 'places'
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const initialTab = (tabParam === 'ai_chats' || tabParam === 'ai') ? 'ai_chats' : (tabParam === 'places' ? 'places' : 'trips');
+  const [activeTab, setActiveTab] = useState(initialTab); // 'trips' | 'places' | 'ai_chats'
+  
+  const [chatHistory, setChatHistory] = useState(() => {
+    try {
+      const stored = localStorage.getItem('ecotrail_ai_chat_history');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    try {
+      localStorage.setItem('ecotrail_ai_chat_history', JSON.stringify(DEFAULT_AI_CHAT_HISTORY));
+    } catch (e) {}
+    return DEFAULT_AI_CHAT_HISTORY;
+  });
+
+  const [expandedChatId, setExpandedChatId] = useState(null);
+  const navigate = useNavigate();
+
+  // Keep state synchronized with URL param if it changes
+  useEffect(() => {
+    if (tabParam === 'ai_chats' || tabParam === 'ai') {
+      setActiveTab('ai_chats');
+    } else if (tabParam === 'places') {
+      setActiveTab('places');
+    } else if (tabParam === 'trips') {
+      setActiveTab('trips');
+    }
+  }, [tabParam]);
+
+  // Listen for real-time chat saved events from TravelAssistant
+  useEffect(() => {
+    const handleChatSaved = () => {
+      try {
+        const stored = localStorage.getItem('ecotrail_ai_chat_history');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) setChatHistory(parsed);
+        }
+      } catch (e) {}
+    };
+    window.addEventListener('ecotrail_chat_saved', handleChatSaved);
+    window.addEventListener('storage', handleChatSaved);
+    return () => {
+      window.removeEventListener('ecotrail_chat_saved', handleChatSaved);
+      window.removeEventListener('storage', handleChatSaved);
+    };
+  }, []);
+
+  const handleOpenInAssistant = (query) => {
+    window.dispatchEvent(new CustomEvent('ecotrail_open_assistant', { detail: { prompt: query } }));
+  };
+
+  const handleDeleteChat = (id) => {
+    const updated = chatHistory.filter((c) => c.id !== id);
+    setChatHistory(updated);
+    try {
+      localStorage.setItem('ecotrail_ai_chat_history', JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  const handleClearAllChats = () => {
+    if (window.confirm('Are you sure you want to clear your AI consultation history?')) {
+      setChatHistory([]);
+      try {
+        localStorage.setItem('ecotrail_ai_chat_history', JSON.stringify([]));
+      } catch (e) {}
+    }
+  };
+
+  const handleRestoreDefaults = () => {
+    setChatHistory(DEFAULT_AI_CHAT_HISTORY);
+    try {
+      localStorage.setItem('ecotrail_ai_chat_history', JSON.stringify(DEFAULT_AI_CHAT_HISTORY));
+    } catch (e) {}
+  };
 
   return (
     <AppLayout>
@@ -887,39 +1113,272 @@ function Saved() {
         <button
           type="button"
           className={activeTab === 'trips' ? 'active' : ''}
-          onClick={() => setActiveTab('trips')}
+          onClick={() => {
+            setActiveTab('trips');
+            setSearchParams({ tab: 'trips' });
+          }}
         >
           Trips (2)
         </button>
         <button
           type="button"
           className={activeTab === 'places' ? 'active' : ''}
-          onClick={() => setActiveTab('places')}
+          onClick={() => {
+            setActiveTab('places');
+            setSearchParams({ tab: 'places' });
+          }}
         >
           Places ({places.length})
         </button>
+        <button
+          type="button"
+          className={activeTab === 'ai_chats' ? 'active' : ''}
+          onClick={() => {
+            setActiveTab('ai_chats');
+            setSearchParams({ tab: 'ai_chats' });
+          }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+        >
+          <span style={{ color: activeTab === 'ai_chats' ? '#bbf7d0' : '#059669', fontWeight: 800 }}>✦</span>
+          AI Chat History ({chatHistory.length})
+        </button>
       </div>
 
-      {activeTab === 'trips' ? (
-        <div className="saved-list">
-          <TripCard
-            title="Coastal slow days in Goa"
-            route="Mumbai → Goa"
-            dates="24–28 SEP"
-            savedPercent="46%"
-          />
-          <TripCard
-            title="Heritage and temple walk"
-            route="Pune → Tirupati"
-            dates="12–15 OCT"
-            savedPercent="72%"
-          />
+      {activeTab === 'trips' && (
+        <div>
+          {/* Subtle notice informing the user that their Gemini AI chats are recorded */}
+          <div className="saved-ai-notice-banner">
+            <div className="saved-ai-notice-left">
+              <span className="saved-ai-sparkle">✦</span>
+              <div>
+                <strong>Gemini AI Chat History Active</strong>
+                <p>
+                  Every travel plan, low-carbon route, and verified package consultation with Gemini AI is automatically saved in this collection.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="saved-ai-switch-btn"
+              onClick={() => {
+                setActiveTab('ai_chats');
+                setSearchParams({ tab: 'ai_chats' });
+              }}
+            >
+              View AI Chats ({chatHistory.length}) →
+            </button>
+          </div>
+
+          <div className="saved-list">
+            <TripCard
+              title="Coastal slow days in Goa"
+              route="Mumbai → Goa"
+              dates="24–28 SEP"
+              savedPercent="46%"
+              img="https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=500&auto=format&fit=crop&q=80"
+            />
+            <TripCard
+              title="Heritage and temple walk"
+              route="Pune → Tirupati"
+              dates="12–15 OCT"
+              savedPercent="72%"
+              img="https://images.unsplash.com/photo-1599661046827-dacff0c0f09a?auto=format&fit=crop&w=500&q=80"
+            />
+          </div>
         </div>
-      ) : (
+      )}
+
+      {activeTab === 'places' && (
         <div className="place-grid" style={{ marginTop: '20px' }}>
           {places.map((p) => (
             <Place key={p.name} p={p} />
           ))}
+        </div>
+      )}
+
+      {activeTab === 'ai_chats' && (
+        <div className="saved-ai-chat-section">
+          <div className="saved-ai-section-header">
+            <div>
+              <h3 style={{ margin: '0 0 4px', fontSize: '18px', color: '#13352f', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#059669' }}>✦</span> Gemini AI Chat Consultations ({chatHistory.length})
+              </h3>
+              <p style={{ margin: 0, fontSize: '13px', color: '#627c73' }}>
+                Verified itineraries, sustainable transit corridors, and official booking portals from your conversations with Gemini AI Assistant.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="ai-action-sm-btn"
+                onClick={() => handleOpenInAssistant('Plan an eco-friendly weekend getaway from Mumbai with electric rail')}
+                title="Start a new chat with Gemini Assistant"
+              >
+                + New Consultation
+              </button>
+              {chatHistory.length > 0 ? (
+                <button
+                  type="button"
+                  className="ai-action-sm-btn danger"
+                  onClick={handleClearAllChats}
+                  title="Clear consultation history"
+                >
+                  Clear All
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="ai-action-sm-btn"
+                  onClick={handleRestoreDefaults}
+                >
+                  Restore Samples
+                </button>
+              )}
+            </div>
+          </div>
+
+          {chatHistory.length === 0 ? (
+            <div className="saved-empty-state">
+              <span style={{ fontSize: '36px' }}>✦</span>
+              <h4>No AI chat consultations yet</h4>
+              <p>Ask the Gemini AI assistant about any route, destination, or official government package to see it preserved here.</p>
+              <button
+                type="button"
+                className="btn small"
+                onClick={() => handleOpenInAssistant('Find the greenest way to Goa with verified low-emission stays')}
+              >
+                Ask Gemini Assistant ↗
+              </button>
+            </div>
+          ) : (
+            <div className="saved-list" style={{ marginTop: '16px' }}>
+              {chatHistory.map((item) => {
+                const isExpanded = expandedChatId === item.id;
+                return (
+                  <div key={item.id} className="ai-chat-history-card">
+                    <div className="trip-card">
+                      <div
+                        className="trip-photo"
+                        style={item.img ? { backgroundImage: `url('${item.img}')` } : {}}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <Pill>✦ GEMINI AI · {item.dateStr || 'CONSULTATION'}</Pill>
+                          <span className="ai-model-tag">{item.model || 'Gemini 2.5 Flash'}</span>
+                        </div>
+                        <h3>{item.title || item.query}</h3>
+                        <p style={{ margin: '3px 0 6px', fontStyle: 'italic', color: '#4d6961' }}>
+                          "{item.query}"
+                        </p>
+                        <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#687f77' }}>
+                          {item.travellers || '2 travellers'} · {item.route}
+                        </p>
+                        <div className="trip-stats" style={{ flexWrap: 'wrap', gap: '10px' }}>
+                          <span>🌿 {item.ecoScore || 92}/100 Eco Score</span>
+                          <span>♧ {item.carbonSaved || item.savedPercent || '46% lower CO₂'}</span>
+                          {item.officialLinks?.length > 0 && (
+                            <span>⭐ {item.officialLinks.length} Official Portals</span>
+                          )}
+                          <span>✓ Verified Direct Booking</span>
+                        </div>
+                      </div>
+
+                      <div className="ai-card-side-actions">
+                        <button
+                          type="button"
+                          className="ai-card-expand-btn"
+                          onClick={() => setExpandedChatId(isExpanded ? null : item.id)}
+                          title={isExpanded ? 'Hide AI Details' : 'View AI Recommendations & Verified Links'}
+                        >
+                          {isExpanded ? 'Hide ▲' : 'View Advice ▾'}
+                        </button>
+                        <button
+                          type="button"
+                          className="ai-card-open-btn"
+                          onClick={() => handleOpenInAssistant(item.query)}
+                          title="Open this query in centered Gemini Assistant"
+                        >
+                          Chat ↗
+                        </button>
+                        <button
+                          type="button"
+                          className="ai-card-delete-btn"
+                          onClick={() => handleDeleteChat(item.id)}
+                          title="Remove from history"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* EXPANDABLE GEMINI RESPONSE & OFFICIAL LINKS DRAWER */}
+                    {isExpanded && (
+                      <div className="ai-chat-expanded-drawer">
+                        <div className="ai-drawer-header">
+                          <span className="ai-sparkle">✦</span>
+                          <strong>Gemini Real-Time Travel Advice &amp; Multimodal Route</strong>
+                          <span className="ai-drawer-badge">100% Genuine · Verified Real-Time Links</span>
+                        </div>
+
+                        {item.response && (
+                          <div className="ai-drawer-body">
+                            <pre className="ai-advice-text">{item.response}</pre>
+                          </div>
+                        )}
+
+                        {/* OFFICIAL GOVERNMENT PACKAGES & TRANSIT PORTALS */}
+                        {item.officialLinks && item.officialLinks.length > 0 && (
+                          <div className="ai-drawer-links-section">
+                            <div className="ai-drawer-links-title">
+                              <span>🏛️</span>
+                              <strong>Official Direct Booking Portals (Zero Markup)</strong>
+                            </div>
+                            <div className="ai-drawer-links-grid">
+                              {item.officialLinks.map((link, lIdx) => (
+                                <a
+                                  key={lIdx}
+                                  href={link.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="ai-drawer-link-card"
+                                >
+                                  <div className="link-card-top">
+                                    <span className="link-cat-pill">
+                                      {link.is_package ? '⭐ Official Package' : (link.category || 'Official Portal')}
+                                    </span>
+                                    <span className="link-verified-tag">✓ {link.badge || 'Verified Govt'}</span>
+                                  </div>
+                                  <div className="link-title">{link.name || link.title}</div>
+                                  <div className="link-domain">🌐 {link.domain || (link.url ? link.url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0] : 'official-portal.gov.in')} ↗</div>
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="ai-drawer-footer">
+                          <button
+                            type="button"
+                            className="btn small"
+                            onClick={() => handleOpenInAssistant(item.query)}
+                          >
+                            Open in Assistant &amp; Ask Follow-Up ↗
+                          </button>
+                          <button
+                            type="button"
+                            className="btn small secondary"
+                            onClick={() => navigate(`/planner?destination=${encodeURIComponent(item.destination || item.origin || 'Goa')}`)}
+                          >
+                            Customize Itinerary in Planner →
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </AppLayout>

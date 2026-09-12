@@ -81,6 +81,24 @@ export default function AppLayout({ children }) {
 
   // Instant Travel Assistant Drawer State
   const [assistantDrawerOpen, setAssistantDrawerOpen] = useState(false);
+  const [assistantActivePrompt, setAssistantActivePrompt] = useState('');
+
+  // Listen for open assistant requests across the app (e.g. from Saved page)
+  useEffect(() => {
+    const handleOpenAssistant = (e) => {
+      const prompt = e.detail?.prompt || '';
+      if (prompt) {
+        setAssistantActivePrompt(prompt);
+      }
+      setAssistantDrawerOpen(true);
+      setNotificationsOpen(false);
+      setProfileDropdownOpen(false);
+    };
+    window.addEventListener('ecotrail_open_assistant', handleOpenAssistant);
+    return () => {
+      window.removeEventListener('ecotrail_open_assistant', handleOpenAssistant);
+    };
+  }, []);
 
   // Notifications State
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -480,7 +498,7 @@ export default function AppLayout({ children }) {
             </div>
 
             <div className="assistant-drawer-content">
-              <TravelAssistant />
+              <TravelAssistant externalPrompt={assistantActivePrompt} />
             </div>
 
             <div className="assistant-drawer-footer">
