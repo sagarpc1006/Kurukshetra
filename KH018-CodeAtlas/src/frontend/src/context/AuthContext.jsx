@@ -441,6 +441,38 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 1-Click Instant Demo Login (Zero setup required for testing and evaluation)
+  const loginAsDemo = async () => {
+    const demoEmail = 'traveler@ecotrail.test';
+    const demoUid = 'uid_demo_guest_101';
+    const token = `mock_token_${demoUid}:${demoEmail}:Eco Traveler`;
+
+    const fallbackUser = {
+      uid: demoUid,
+      email: demoEmail,
+      displayName: 'Eco Traveler',
+      getIdToken: async () => token,
+    };
+
+    let demoProfile = {
+      firebase_uid: demoUid,
+      email: demoEmail,
+      name: 'Eco Traveler',
+    };
+
+    try {
+      demoProfile = await syncFirebaseAuth(token);
+    } catch (e) {}
+
+    setUser(fallbackUser);
+    setProfile(demoProfile);
+    localStorage.setItem('ecotrail_session', JSON.stringify({
+      user: fallbackUser,
+      profile: demoProfile,
+    }));
+    return { user: fallbackUser, profile: demoProfile };
+  };
+
   // Logout
   const logout = async () => {
     try {
@@ -459,6 +491,7 @@ export const AuthProvider = ({ children }) => {
     login,
     signup,
     loginWithGoogle,
+    loginAsDemo,
     logout,
   };
 

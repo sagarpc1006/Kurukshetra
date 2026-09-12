@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
+import api from '../services/api';
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80';
 
@@ -215,17 +216,19 @@ export default function Discover() {
       if (query && query.trim()) {
         params.append('search', query.trim());
       }
-      const res = await fetch(`/api/discover/?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.places && data.places.length > 0) {
-          setPlaces(data.places);
-        } else {
-          setPlaces([]);
-        }
+      const res = await api.get(`/api/discover/?${params.toString()}`);
+      if (res.data && res.data.places && res.data.places.length > 0) {
+        setPlaces(res.data.places);
+      } else if (res.data && Array.isArray(res.data.places)) {
+        setPlaces([]);
+      } else {
+        setPlaces(DEFAULT_PLACES);
       }
     } catch (err) {
       console.warn('Real-time API unavailable, using cached registry fallback:', err);
+      if (!query) {
+        setPlaces(DEFAULT_PLACES);
+      }
     } finally {
       setLoading(false);
     }

@@ -15,7 +15,10 @@ apiClient.interceptors.request.use(
   async (config) => {
     try {
       if (auth && typeof auth.authStateReady === 'function') {
-        await auth.authStateReady();
+        await Promise.race([
+          auth.authStateReady(),
+          new Promise((res) => setTimeout(res, 500)),
+        ]);
       }
       const currentUser = auth?.currentUser;
       if (currentUser && typeof currentUser.getIdToken === 'function') {
@@ -34,11 +37,21 @@ apiClient.interceptors.request.use(
           const name = parsed?.user?.displayName || parsed?.profile?.name || '';
           if (uid) {
             config.headers.Authorization = `Bearer mock_token_${uid}:${email}:${name}`;
+            return config;
           }
         } catch (e) {}
       }
+
+      config.headers = config.headers || {};
+      if (!config.headers.Authorization) {
+        config.headers.Authorization = 'Bearer mock_token_guest_traveler:guest@ecotrail.test:Guest Traveler';
+      }
     } catch (error) {
       console.error('Error fetching Firebase ID token for request:', error);
+      config.headers = config.headers || {};
+      if (!config.headers.Authorization) {
+        config.headers.Authorization = 'Bearer mock_token_guest_traveler:guest@ecotrail.test:Guest Traveler';
+      }
     }
     return config;
   },

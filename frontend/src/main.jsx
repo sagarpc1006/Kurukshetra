@@ -250,7 +250,7 @@ function Landing(){
 
 function AuthModal({ mode, onClose }) {
   const nav = useNavigate();
-  const { login, signup: authSignup, loginWithGoogle } = useAuth();
+  const { login, signup: authSignup, loginWithGoogle, loginAsDemo } = useAuth();
   const [isSignup, setIsSignup] = useState(mode === 'signup');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -341,8 +341,37 @@ function AuthModal({ mode, onClose }) {
               </button>
             </form>
             <div className="or">or continue with</div>
-            <div className="social">
-              <button type="button" onClick={handleGoogle} style={{width:'100%'}}><b>G</b> Continue with Google</button>
+            <div className="social" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <button type="button" onClick={handleGoogle} style={{ width: '100%' }}><b>G</b> Continue with Google</button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setError(''); setIsSubmitting(true);
+                  try {
+                    await loginAsDemo();
+                    onClose();
+                    nav('/dashboard', { replace: true });
+                  } catch (err) { setError(err.message); }
+                  finally { setIsSubmitting(false); }
+                }}
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.06))',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  color: '#065f46',
+                  fontWeight: 600,
+                  fontSize: '12.5px',
+                  padding: '9px 12px',
+                  borderRadius: '7px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>🌿</span> Explore as Demo Traveler (1-Click Instant)
+              </button>
             </div>
             <p className="switch">
               {isSignup ? 'Already have an account?' : 'New to EcoTrail?'}{' '}
@@ -360,7 +389,7 @@ function AuthModal({ mode, onClose }) {
 function Auth({signup=false}){
   const nav = useNavigate();
   const location = useLocation();
-  const { login, signup: authSignup, loginWithGoogle, isAuthenticated } = useAuth();
+  const { login, signup: authSignup, loginWithGoogle, loginAsDemo, isAuthenticated } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -494,9 +523,38 @@ function Auth({signup=false}){
           </form>
 
           <div className="or">or continue with</div>
-          <div className="social">
+          <div className="social" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <button type="button" onClick={handleGoogleSignIn} style={{ width: '100%' }}>
               <b>G</b> Continue with Google
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                setError(''); setIsSubmitting(true);
+                try {
+                  await loginAsDemo();
+                  const destination = location.state?.from?.pathname || '/dashboard';
+                  nav(destination, { replace: true });
+                } catch (err) { setError(err.message); }
+                finally { setIsSubmitting(false); }
+              }}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.06))',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
+                color: '#065f46',
+                fontWeight: 600,
+                fontSize: '12.5px',
+                padding: '10px 14px',
+                borderRadius: '7px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span>🌿</span> Explore as Demo Traveler (1-Click Instant)
             </button>
           </div>
 
