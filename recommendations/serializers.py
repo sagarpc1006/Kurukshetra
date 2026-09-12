@@ -4,7 +4,7 @@ class RecommendationQuerySerializer(serializers.Serializer):
     origin = serializers.CharField(required=True, max_length=150)
     destination = serializers.CharField(required=True, max_length=150)
     budget = serializers.FloatField(required=False, allow_null=True)
-    currency = serializers.CharField(required=False, default="INR", max_length=10)
+    currency = serializers.CharField(required=False, default="INR", allow_null=True, allow_blank=True, max_length=10)
     travel_dates = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     eco_priority = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     accessibility_required = serializers.BooleanField(required=False, default=False)

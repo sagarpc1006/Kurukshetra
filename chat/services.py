@@ -52,6 +52,10 @@ def generate_realtime_chat_response(
 
     pkg_names_str = ", ".join([f"[{p['name']}]({p['url']})" for p in packages]) if packages else ""
 
+    eco_twin_pct = 0
+    if isinstance(eco_twin, dict):
+        eco_twin_pct = eco_twin.get('comparison', {}).get('carbon_saved_percent', 0)
+
     prompt = f"""
 You are EcoTrail AI, a real-time, highly knowledgeable sustainable travel assistant.
 The traveler just asked: "{message}"
@@ -60,7 +64,7 @@ Trip Context:
 - Route: {origin} to {dest} ({duration} days)
 - Budget: {f'{currency} {budget}' if budget else 'Flexible'}
 - Top Recommended Option: {top_title} ({top_co2} kg CO2e, Eco Score: {top_score}/100)
-- Eco-Twin Alternative: {eco_twin.get('comparison', {}).get('carbon_saved_percent', 0)}% lower emissions than baseline
+- Eco-Twin Alternative: {eco_twin_pct}% lower emissions than baseline
 
 AUTHENTIC OFFICIAL GOVERNMENT PACKAGES AVAILABLE FOR DIRECT ACCESS:
 {packages_summary if packages_summary else "- IRCTC Official Tourism Packages (https://www.irctctourism.com): Direct national rail and holiday packages."}

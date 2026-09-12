@@ -18,7 +18,7 @@ class TravelIntentSerializer(serializers.Serializer):
     destination = serializers.CharField(allow_null=True, required=False)
     duration_days = serializers.IntegerField(allow_null=True, required=False)
     budget = serializers.FloatField(allow_null=True, required=False)
-    currency = serializers.CharField(default="INR", max_length=10)
+    currency = serializers.CharField(default="INR", allow_null=True, required=False, max_length=10)
     eco_priority = serializers.CharField(allow_null=True, required=False)
     accessibility_required = serializers.BooleanField(default=False)
     wheelchair_required = serializers.BooleanField(default=False)

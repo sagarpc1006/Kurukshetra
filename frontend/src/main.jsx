@@ -626,7 +626,24 @@ function Dashboard(){
   );
 }
 
-function TripCard(){return <div className="trip-card"><div className="trip-photo"></div><div><Pill>UPCOMING · 24–28 SEP</Pill><h3>Coastal slow days in Goa</h3><p>2 travellers · Mumbai → Goa</p><div className="trip-stats"><span>♧ 46% lower CO₂</span><span>✓ All stays verified</span></div></div><b>→</b></div>}
+function TripCard({ title = 'Coastal slow days in Goa', route = 'Mumbai → Goa', dates = '24–28 SEP', savedPercent = '46%' } = {}) {
+  return (
+    <div className="trip-card">
+      <div className="trip-photo"></div>
+      <div>
+        <Pill>UPCOMING · {dates}</Pill>
+        <h3>{title}</h3>
+        <p>2 travellers · {route}</p>
+        <div className="trip-stats">
+          <span>♧ {savedPercent} lower CO₂</span>
+          <span>✓ All stays verified</span>
+        </div>
+      </div>
+      <b>→</b>
+    </div>
+  );
+}
+
 function Place({p}){
   return (
     <Link to="/discover" className="place">
@@ -648,11 +665,266 @@ function Place({p}){
   );
 }
 
-function Results(){return <AppLayout><section className="page-top compact"><Pill>MUMBAI → GOA · 24–28 SEP</Pill><h1>Your journey, <i>considered.</i></h1><p>We found options that balance your priorities beautifully.</p></section><div className="results-tabs"><button className="active">Recommended</button><button>Fastest</button><button>Lowest cost</button><button>Lowest impact</button></div><section className="results"><div><Result type="eco"/><Result type="regular"/></div><aside className="result-aside"><Pill>YOUR IMPACT</Pill><h3>Choose the Eco-Twin</h3><div className="big-number">−46%<span>less CO₂</span></div><p>Choosing train over flight saves the equivalent of 14 kg of coal burned.</p><Link className="arrow-link" to="/comparison">See full comparison →</Link></aside></section></AppLayout>}
-function Result({type}){let eco=type==='eco'; return <article className={'result '+type}><div className="result-img"></div><div className="result-content"><Pill>{eco?'ECOTRAIL PICK':'REGULAR OPTION'}</Pill><h2>{eco?'Konkan Railway':'Direct flight'}</h2><p>{eco?'Mumbai CSMT → Madgaon · Overnight':'Mumbai → Goa · 1h 20m'}</p><div className="result-details"><span>◷ {eco?'10h 45m':'3h 40m'}</span><span>₹ {eco?'1,280':'5,180'}</span><span>♧ {eco?'35':'130'} kg CO₂</span></div>{eco&&<div className="verified">✓ Accessibility & hygiene details verified</div>}</div><button>⌄</button></article>}
-function Comparison(){return <AppLayout><section className="page-top compact"><Pill>YOUR ECO-TWIN</Pill><h1>Same destination.<br/><i>Better way to get there.</i></h1></section><section className="compare"><div className="compare-head"><div>✈ <b>Regular trip</b><span>Direct flight</span></div><div className="eco-head">♧ <b>Eco-Twin</b><span>Konkan Railway</span></div></div>{[['Carbon emissions','130 kg CO₂','35 kg CO₂','73% lower'],['Total cost','₹5,180','₹1,280','₹3,900 saved'],['Travel time','3h 40m','10h 45m','+7h 05m'],['Comfort','Standard seat','Sleeper cabin','More room'],['Accessibility','Limited info','Verified access','Checked for you']].map(x=><div className="compare-row" key={x[0]}><span>{x[0]}</span><b>{x[1]}</b><b className="green">{x[2]} <small>{x[3]}</small></b></div>)}</section><div className="compare-cta"><span>♧</span><div><b>Your Eco-Twin saves 95 kg of CO₂</b><p>That's the clearest route to a lighter journey.</p></div><Link className="btn" to="/saved">Save this trip <b>→</b></Link></div></AppLayout>}
+function Results() {
+  const location = useLocation();
+  const trip = location.state || {};
+  const origin = trip.origin || 'Mumbai, India';
+  const destination = trip.destination || 'Goa, India';
+  const dates = trip.dates || '24 Sep – 28 Sep';
+  const travellers = trip.travellers || '2 travellers';
+  const priorities = trip.selectedPriorities || ['Lower impact'];
 
-function Saved(){return <AppLayout><section className="page-top compact"><Pill>YOUR COLLECTION</Pill><h1>Saved for <i>some day.</i></h1><p>All the little possibilities waiting for the right moment.</p></section><div className="saved-tabs"><button className="active">Trips (2)</button><button>Places (12)</button></div><div className="saved-list"><TripCard/><TripCard/></div></AppLayout>}
+  const originCity = origin.split(',')[0].trim();
+  const destCity = destination.split(',')[0].trim();
+
+  const [activeTab, setActiveTab] = useState('recommended');
+
+  return (
+    <AppLayout>
+      <section className="page-top compact">
+        <Pill>{originCity.toUpperCase()} → {destCity.toUpperCase()} · {dates.toUpperCase()}</Pill>
+        <h1>Your journey, <i>considered.</i></h1>
+        <p>We found balanced options tailored for {travellers} prioritizing {priorities.join(', ')}.</p>
+      </section>
+
+      <div className="results-tabs">
+        <button
+          type="button"
+          className={activeTab === 'recommended' ? 'active' : ''}
+          onClick={() => setActiveTab('recommended')}
+        >
+          Recommended
+        </button>
+        <button
+          type="button"
+          className={activeTab === 'fastest' ? 'active' : ''}
+          onClick={() => setActiveTab('fastest')}
+        >
+          Fastest
+        </button>
+        <button
+          type="button"
+          className={activeTab === 'cost' ? 'active' : ''}
+          onClick={() => setActiveTab('cost')}
+        >
+          Lowest cost
+        </button>
+        <button
+          type="button"
+          className={activeTab === 'impact' ? 'active' : ''}
+          onClick={() => setActiveTab('impact')}
+        >
+          Lowest impact
+        </button>
+      </div>
+
+      <section className="results">
+        <div>
+          <Result
+            type="eco"
+            origin={originCity}
+            destination={destCity}
+            dates={dates}
+            activeTab={activeTab}
+          />
+          <Result
+            type="regular"
+            origin={originCity}
+            destination={destCity}
+            dates={dates}
+            activeTab={activeTab}
+          />
+        </div>
+
+        <aside className="result-aside">
+          <Pill>YOUR IMPACT</Pill>
+          <h3>Choose the Eco-Twin</h3>
+          <div className="big-number">−46%<span>less CO₂</span></div>
+          <p>Choosing electric rail over flight saves the equivalent of 14 kg of coal burned per traveller.</p>
+          <Link
+            className="arrow-link"
+            to="/comparison"
+            state={{ origin: originCity, destination: destCity, dates, travellers }}
+          >
+            See full comparison →
+          </Link>
+        </aside>
+      </section>
+    </AppLayout>
+  );
+}
+
+function Result({ type, origin = 'Mumbai', destination = 'Goa', dates, activeTab = 'recommended' }) {
+  const [expanded, setExpanded] = useState(false);
+  const eco = type === 'eco';
+
+  const title = eco
+    ? `Electric Express Rail (${origin} → ${destination})`
+    : `Direct Airline Route (${origin} → ${destination})`;
+
+  const routeSub = eco
+    ? `${origin} Central → ${destination} Station · Scenic Daylight Route`
+    : `${origin} Airport → ${destination} Airport · Direct`;
+
+  let time = eco ? '8h 15m' : '2h 10m';
+  let price = eco ? '1,280' : '4,850';
+  let co2 = eco ? '24' : '118';
+
+  if (activeTab === 'fastest') {
+    if (eco) { time = '7h 30m'; price = '1,650'; }
+  } else if (activeTab === 'cost') {
+    if (eco) { price = '850'; time = '9h 10m'; }
+  } else if (activeTab === 'impact') {
+    if (eco) { co2 = '18'; }
+  }
+
+  return (
+    <article className={'result ' + type}>
+      <div className="result-img"></div>
+      <div className="result-content">
+        <Pill>{eco ? 'ECOTRAIL PICK' : 'REGULAR OPTION'}</Pill>
+        <h2>{title}</h2>
+        <p>{routeSub}</p>
+        <div className="result-details">
+          <span>◷ {time}</span>
+          <span>₹ {price}</span>
+          <span>♧ {co2} kg CO₂</span>
+        </div>
+        {eco && <div className="verified">✓ Accessibility &amp; green stays verified</div>}
+        {expanded && (
+          <div style={{ marginTop: '12px', fontSize: '12.5px', color: '#3d5c52', lineHeight: '1.45' }}>
+            <p><strong>Highlights:</strong> Zero flight emissions, authorized direct government booking, and step-free platform access.</p>
+            <Link to={`/discover`} style={{ color: '#0b6c57', fontWeight: 700, textDecoration: 'underline' }}>
+              Explore official packages for {destination} ↗
+            </Link>
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        title={expanded ? 'Collapse details' : 'Expand details'}
+        aria-label="Toggle details"
+      >
+        {expanded ? '⌃' : '⌄'}
+      </button>
+    </article>
+  );
+}
+
+function Comparison() {
+  const location = useLocation();
+  const trip = location.state || {};
+  const origin = trip.origin || 'Mumbai';
+  const destination = trip.destination || 'Goa';
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  const handleSave = () => {
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 3000);
+  };
+
+  const comparisonMetrics = [
+    ['Carbon emissions', '118 kg CO₂', '24 kg CO₂', '80% lower'],
+    ['Total cost', '₹4,850', '₹1,280', '₹3,570 saved'],
+    ['Travel time', '2h 10m', '8h 15m', 'Scenic route'],
+    ['Comfort', 'Standard seat', 'AC sleeper cabin', 'More legroom'],
+    ['Accessibility', 'Limited info', 'Verified step-free', 'Wheelchair ramps']
+  ];
+
+  return (
+    <AppLayout>
+      <section className="page-top compact">
+        <Pill>{origin.toUpperCase()} → {destination.toUpperCase()} COMPARISON</Pill>
+        <h1>Same destination.<br /><i>Better way to get there.</i></h1>
+      </section>
+
+      <section className="compare">
+        <div className="compare-head">
+          <div>✈ <b>Regular trip</b><span>Direct flight</span></div>
+          <div className="eco-head">♧ <b>Eco-Twin</b><span>Electric Rail / Green Transit</span></div>
+        </div>
+        {comparisonMetrics.map((x) => (
+          <div className="compare-row" key={x[0]}>
+            <span>{x[0]}</span>
+            <b>{x[1]}</b>
+            <b className="green">{x[2]} <small>{x[3]}</small></b>
+          </div>
+        ))}
+      </section>
+
+      <div className="compare-cta">
+        <span>♧</span>
+        <div>
+          <b>Your Eco-Twin saves 94 kg of CO₂</b>
+          <p>That's the clearest route to a lighter journey to {destination}.</p>
+        </div>
+        <button
+          type="button"
+          className="btn"
+          onClick={handleSave}
+          style={{ cursor: 'pointer' }}
+        >
+          {savedSuccess ? '✓ Saved to Collection!' : 'Save this trip →'}
+        </button>
+      </div>
+    </AppLayout>
+  );
+}
+
+function Saved() {
+  const [activeTab, setActiveTab] = useState('trips'); // 'trips' | 'places'
+
+  return (
+    <AppLayout>
+      <section className="page-top compact">
+        <Pill>YOUR COLLECTION</Pill>
+        <h1>Saved for <i>some day.</i></h1>
+        <p>All the little possibilities waiting for the right moment.</p>
+      </section>
+
+      <div className="saved-tabs">
+        <button
+          type="button"
+          className={activeTab === 'trips' ? 'active' : ''}
+          onClick={() => setActiveTab('trips')}
+        >
+          Trips (2)
+        </button>
+        <button
+          type="button"
+          className={activeTab === 'places' ? 'active' : ''}
+          onClick={() => setActiveTab('places')}
+        >
+          Places ({places.length})
+        </button>
+      </div>
+
+      {activeTab === 'trips' ? (
+        <div className="saved-list">
+          <TripCard
+            title="Coastal slow days in Goa"
+            route="Mumbai → Goa"
+            dates="24–28 SEP"
+            savedPercent="46%"
+          />
+          <TripCard
+            title="Heritage and temple walk"
+            route="Pune → Tirupati"
+            dates="12–15 OCT"
+            savedPercent="72%"
+          />
+        </div>
+      ) : (
+        <div className="place-grid" style={{ marginTop: '20px' }}>
+          {places.map((p) => (
+            <Place key={p.name} p={p} />
+          ))}
+        </div>
+      )}
+    </AppLayout>
+  );
+}
 
 
 function App(){

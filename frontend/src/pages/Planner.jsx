@@ -1,17 +1,28 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 
 export default function Planner() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  // Form state initialized with reference defaults
-  const [destination, setDestination] = useState('Goa, India');
+  // Read destination from query params if coming from Discover (e.g. /planner?destination=Tirupati)
+  const initialDestination = searchParams.get('destination') || 'Goa, India';
+
+  // Form state initialized with dynamic destination or reference defaults
+  const [destination, setDestination] = useState(initialDestination);
   const [origin, setOrigin] = useState('Mumbai, India');
   const [dates, setDates] = useState('24 Sep – 28 Sep');
   const [travellers, setTravellers] = useState('2 travellers');
   const [travellersDropdownOpen, setTravellersDropdownOpen] = useState(false);
   const [selectedPriorities, setSelectedPriorities] = useState(['Lower impact']);
+
+  useEffect(() => {
+    const destParam = searchParams.get('destination');
+    if (destParam) {
+      setDestination(destParam);
+    }
+  }, [searchParams]);
 
   const priorityOptions = [
     {
@@ -59,7 +70,15 @@ export default function Planner() {
 
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
-    navigate('/results');
+    navigate('/results', {
+      state: {
+        origin,
+        destination,
+        dates,
+        travellers,
+        selectedPriorities
+      }
+    });
   };
 
   return (
