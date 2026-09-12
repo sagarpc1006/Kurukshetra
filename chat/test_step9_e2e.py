@@ -172,3 +172,37 @@ class Step9EndToEndIntegrationTests(TestCase):
         response = self.client.post('/api/chat/', {"message": "Pune to Goa for 3 days"}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["recommendations"]["results"]), 0)
+
+    # 10. Genuine real-time official package links and portal access
+    @patch('myapp.authentication.verify_firebase_token')
+    def test_10_official_packages_and_realtime_links(self, mock_verify):
+        mock_verify.return_value = self.mock_token_payload
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer valid_mock_token')
+
+        response = self.client.post(
+            '/api/chat/',
+            {"message": "Plan a trip to Tirupati for Balaji darshan from Mumbai for 3 days"},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data
+        self.assertTrue(data["success"])
+
+        # Check official links
+        links = data.get("official_links", [])
+        self.assertGreater(len(links), 0)
+
+        # Check that official packages exist
+        package_links = [l for l in links if l.get("is_package")]
+        self.assertGreater(len(package_links), 0)
+
+        # Confirm exact government/authorized package URLs exist
+        urls = [l["url"] for l in links]
+        has_ttd = any("ttdevasthanams.ap.gov.in" in u for u in urls)
+        has_irctc = any("irctc" in u for u in urls)
+        self.assertTrue(has_ttd)
+        self.assertTrue(has_irctc)
+
+        # Ensure AI response exists and is non-empty
+        self.assertTrue(len(data.get("ai_response", "")) > 20)
+

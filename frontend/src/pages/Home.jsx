@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import AppNavbar from '../components/AppNavbar';
 import WelcomeSection from '../components/WelcomeSection';
 import TravelAssistant from '../components/TravelAssistant';
@@ -9,8 +9,19 @@ import EcoImpactCard from '../components/EcoImpactCard';
 
 export default function Home() {
   const assistantRef = useRef(null);
+  const [activePrompt, setActivePrompt] = useState('');
 
-  const scrollToAssistant = () => {
+  const scrollToAssistant = (customPrompt) => {
+    if (typeof customPrompt === 'string' && customPrompt.trim()) {
+      setActivePrompt(customPrompt);
+    }
+    if (assistantRef.current) {
+      assistantRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleTriggerPrompt = (promptText) => {
+    setActivePrompt(promptText);
     if (assistantRef.current) {
       assistantRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -31,14 +42,14 @@ export default function Home() {
             {/* Left Primary Column: AI Travel Assistant + Recent Trips */}
             <section className="dashboard-primary-col" ref={assistantRef}>
               {/* C. Main AI Travel Assistant & D. Quick Prompts */}
-              <TravelAssistant />
+              <TravelAssistant externalPrompt={activePrompt} />
 
               {/* F. Recent Trips */}
               <RecentTrips onPlanTripClick={scrollToAssistant} />
             </section>
 
-            {/* Right Secondary Column: Eco Score + Eco Impact + Travel Preferences */}
-            <aside className="dashboard-secondary-col" aria-label="Impact and Preferences Overview">
+            {/* Right Secondary Column: Eco Score, Eco Impact & Travel Preferences */}
+            <aside className="dashboard-secondary-col" aria-label="Website Features & Overview">
               {/* EcoTrail Score Ring (Section 12) */}
               <EcoScore />
 

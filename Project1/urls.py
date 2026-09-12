@@ -22,6 +22,7 @@ urlpatterns = [
     path('api/accessibility/', include('accessibility.urls')),
     path('api/recommendations/', include('recommendations.urls')),
     path('api/trips/', include('trips.urls')),
+    path('api/discover/', include('travel.urls')),
     path('api/', include('chat.urls')),
     path('', include('myapp.urls')),
 ]

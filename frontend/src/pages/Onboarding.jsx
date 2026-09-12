@@ -2,209 +2,105 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import {
+  EcoTrailBrandLogo,
+  MountainIllustration,
+  BeachIllustration,
+  ForestIllustration,
+  CityIllustration,
+  AdventureIllustration,
+  RelaxationIllustration,
+  ExplorationIllustration,
+  NightlifeIllustration,
+  NatureFirstIllustration,
+  CultureFirstIllustration,
+  FoodFirstIllustration,
+  ActivitiesFirstIllustration,
+  SpontaneousIllustration,
+  WellPlannedIllustration,
+  FastPacedIllustration,
+  SlowEasyIllustration,
+  GreenerTransitIllustration,
+  CheaperTransitIllustration,
+  FasterTransitIllustration,
+  ComfortTransitIllustration,
+  DefinitelyGreenIllustration,
+  ReasonableGreenIllustration,
+  SimilarGreenIllustration,
+  LowerImpactIllustration,
+  LowerCostIllustration,
+  BetterExpIllustration,
+  OverallBalanceIllustration,
+} from '../components/QuestionIllustrations';
 
 const QUESTIONS = [
   {
-    id: 'style',
-    title: 'What kind of travel inspires you most?',
-    subtitle: 'This helps our AI prioritize destinations that match your energy and wanderlust.',
+    id: 'q1',
+    title: 'If you could escape anywhere this weekend, where would you go?',
     options: [
-      {
-        id: 'nature',
-        label: 'Eco-Sanctuaries & Nature',
-        desc: 'National parks, lush forests, wildlife trails & green retreats',
-        icon: '🌿',
-      },
-      {
-        id: 'culture',
-        label: 'Heritage & Culture',
-        desc: 'Historic forts, ancient temples, artisan hubs & rich traditions',
-        icon: '🏛️',
-      },
-      {
-        id: 'beach',
-        label: 'Coastal & Ocean Calm',
-        desc: 'Pristine shores, tranquil backwaters & coastal slow days',
-        icon: '🏖️',
-      },
-      {
-        id: 'mountains',
-        label: 'Mountain Escapes & Treks',
-        desc: 'High-altitude ridges, serene hill stations & scenic valleys',
-        icon: '🏔️',
-      },
+      { id: 'mountains', label: 'Mountains', Illustration: MountainIllustration },
+      { id: 'beach', label: 'Beach', Illustration: BeachIllustration },
+      { id: 'forest', label: 'Forest', Illustration: ForestIllustration },
+      { id: 'city', label: 'City', Illustration: CityIllustration },
     ],
   },
   {
-    id: 'ecoPriority',
-    title: 'How important is sustainability to your travel choices?',
-    subtitle: 'We calibrate our Eco-Twin recommendations to respect your carbon footprint goals.',
+    id: 'q2',
+    title: 'What kind of trip sounds most like you?',
     options: [
-      {
-        id: 'High',
-        label: 'High Priority (Lowest CO₂)',
-        desc: 'Always recommend scenic trains, low-carbon transit & verified eco-stays',
-        icon: '♧',
-        badge: 'Recommended',
-      },
-      {
-        id: 'Moderate',
-        label: 'Balanced & Practical',
-        desc: 'Choose sustainable options when practical without major travel delays',
-        icon: '⚖️',
-      },
-      {
-        id: 'Standard',
-        label: 'Flexible',
-        desc: 'Keep all standard travel options open, highlighting greener choices',
-        icon: '☼',
-      },
+      { id: 'adventure', label: 'Adventure', Illustration: AdventureIllustration },
+      { id: 'relaxation', label: 'Peace & relaxation', Illustration: RelaxationIllustration },
+      { id: 'exploration', label: 'Exploration', Illustration: ExplorationIllustration },
+      { id: 'nightlife', label: 'Fun & nightlife', Illustration: NightlifeIllustration },
     ],
   },
   {
-    id: 'budget',
-    title: 'What is your typical budget per journey?',
-    subtitle: 'We use this to find the best balance of value, comfort, and sustainability.',
+    id: 'q3',
+    title: 'You reach a new destination. What do you want to experience first?',
     options: [
-      {
-        id: '8000',
-        label: 'Pocket-Friendly',
-        val: 'Under ₹10,000',
-        desc: 'Sleeper trains, eco-hostels & smart budget exploration',
-        icon: '🪙',
-      },
-      {
-        id: '18000',
-        label: 'Comfort & Value',
-        val: '₹10,000 – ₹25,000',
-        desc: '3AC/2AC trains, boutique homestays & guided eco-tours',
-        icon: '💳',
-      },
-      {
-        id: '35000',
-        label: 'Premium Green',
-        val: '₹25,000 – ₹50,000',
-        desc: 'Vande Bharat / 1AC, certified heritage resorts & bespoke trips',
-        icon: '💎',
-      },
-      {
-        id: '75000',
-        label: 'Luxury & Splurge',
-        val: '₹50,000+',
-        desc: 'Luxury sustainable villas, private electric transfers & finest stays',
-        icon: '👑',
-      },
+      { id: 'nature', label: 'Nature', Illustration: NatureFirstIllustration },
+      { id: 'culture', label: 'Local culture', Illustration: CultureFirstIllustration },
+      { id: 'food', label: 'Local food', Illustration: FoodFirstIllustration },
+      { id: 'activities', label: 'Activities', Illustration: ActivitiesFirstIllustration },
     ],
   },
   {
-    id: 'transport',
-    title: 'What is your preferred mode of transport?',
-    subtitle: 'EcoTrail loves scenic, low-emission travel. Tell us how you prefer to get there.',
+    id: 'q4',
+    title: 'How do you like to travel?',
     options: [
-      {
-        id: 'Train',
-        label: 'Scenic Railways & Express Trains',
-        desc: 'Vande Bharat, Konkan Railway, sleeper journeys with breathtaking views',
-        icon: '🚆',
-      },
-      {
-        id: 'Public Transport',
-        label: 'Electric & Shared Buses',
-        desc: 'Intercity electric coaches, state transit & shared eco-shuttles',
-        icon: '🚌',
-      },
-      {
-        id: 'Road Trip',
-        label: 'Road Trips & Car Rentals',
-        desc: 'Flexible driving routes, electric vehicle road trips & weekend escapes',
-        icon: '🚗',
-      },
-      {
-        id: 'Flight',
-        label: 'Fast Flights for Long Distance',
-        desc: 'Quick direct connections when time is critical, with carbon offsets',
-        icon: '✈️',
-      },
+      { id: 'spontaneous', label: 'Spontaneously', Illustration: SpontaneousIllustration },
+      { id: 'planned', label: 'Well-planned', Illustration: WellPlannedIllustration },
+      { id: 'fast_paced', label: 'Fast-paced', Illustration: FastPacedIllustration },
+      { id: 'slow_easy', label: 'Slow & easy', Illustration: SlowEasyIllustration },
     ],
   },
   {
-    id: 'accessibility',
-    title: 'Do you have any accessibility requirements?',
-    subtitle: 'Every traveler deserves dignified access. We verify ramps, lifts, and step-free routes.',
+    id: 'q5',
+    title: 'When choosing how to reach your destination, what would you prefer?',
     options: [
-      {
-        id: 'none',
-        label: 'Standard Access (No specific needs)',
-        desc: 'Standard walking routes, stairs and regular transport are suitable',
-        icon: '🚶',
-      },
-      {
-        id: 'wheelchair',
-        label: 'Wheelchair Accessible Routes',
-        desc: 'Require step-free access, wheelchair ramps, wide doors & elevators',
-        icon: '♿',
-      },
-      {
-        id: 'step_free',
-        label: 'Step-Free & Elevator Access',
-        desc: 'Prefer lifts, escalators and zero-step boarding where available',
-        icon: '🛗',
-      },
-      {
-        id: 'reduced_walking',
-        label: 'Reduced Walking Distance',
-        desc: 'Prefer short transfer walks, direct pickup points & minimal pacing',
-        icon: '⏱️',
-      },
+      { id: 'greener', label: 'Greener option', Illustration: GreenerTransitIllustration },
+      { id: 'cheaper', label: 'Cheaper option', Illustration: CheaperTransitIllustration },
+      { id: 'faster', label: 'Faster option', Illustration: FasterTransitIllustration },
+      { id: 'comfortable', label: 'More comfortable option', Illustration: ComfortTransitIllustration },
     ],
   },
   {
-    id: 'group',
-    title: 'Who do you usually travel with?',
-    subtitle: 'This helps us tune group sizes, seat selections, and itinerary paces.',
+    id: 'q6',
+    title: 'Would you choose a greener option if it took a little longer?',
     options: [
-      {
-        id: 'solo',
-        label: 'Solo Explorer',
-        desc: 'Independent adventures, flexible scheduling & meeting other travelers',
-        icon: '🎒',
-      },
-      {
-        id: 'couple',
-        label: 'Couple / Duo',
-        desc: 'Romantic getaways, calm escapes & quality time together',
-        icon: '👫',
-      },
-      {
-        id: 'family',
-        label: 'Family & Children / Elders',
-        desc: 'Multi-generational comfort, safe paces & verified amenities',
-        icon: '👨‍👩‍👧',
-      },
-      {
-        id: 'friends',
-        label: 'Group of Friends',
-        desc: 'Lively group itineraries, shared cabins, road trips & adventure',
-        icon: '👥',
-      },
+      { id: 'definitely', label: 'Definitely', Illustration: DefinitelyGreenIllustration },
+      { id: 'reasonable', label: 'If it’s reasonable', Illustration: ReasonableGreenIllustration },
+      { id: 'similar', label: 'Only if everything else is similar', Illustration: SimilarGreenIllustration },
     ],
   },
   {
-    id: 'homeCity',
-    title: 'Where do you usually start your journeys from?',
-    subtitle: 'Your home base lets us calculate real train timings, routes, and carbon savings.',
-    isCityPicker: true,
-    cities: [
-      'Mumbai',
-      'Delhi',
-      'Bengaluru',
-      'Pune',
-      'Hyderabad',
-      'Chennai',
-      'Kolkata',
-      'Ahmedabad',
-      'Jaipur',
-      'Goa',
+    id: 'q7',
+    title: 'What should EcoTrail prioritize when planning your trip?',
+    options: [
+      { id: 'lower_impact', label: 'Lower impact', Illustration: LowerImpactIllustration },
+      { id: 'lower_cost', label: 'Lower cost', Illustration: LowerCostIllustration },
+      { id: 'better_exp', label: 'Better experience', Illustration: BetterExpIllustration },
+      { id: 'overall_balance', label: 'Best overall balance', Illustration: OverallBalanceIllustration },
     ],
   },
 ];
@@ -215,14 +111,13 @@ export default function Onboarding() {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState({
-    style: 'nature',
-    ecoPriority: 'High',
-    budget: '18000',
-    transport: 'Train',
-    accessibility: 'none',
-    group: 'solo',
-    homeCity: 'Mumbai',
-    customCity: '',
+    q1: 'mountains',
+    q2: 'adventure',
+    q3: 'nature',
+    q4: 'planned',
+    q5: 'greener',
+    q6: 'definitely',
+    q7: 'overall_balance',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -254,16 +149,28 @@ export default function Onboarding() {
   const handleComplete = async () => {
     setIsSubmitting(true);
     try {
-      const homeCityVal =
-        answers.homeCity === 'other'
-          ? (answers.customCity || 'Mumbai').trim()
-          : answers.homeCity;
+      // Map cleanly into backend fields without touching backend code
+      const ecoPriority =
+        answers.q7 === 'lower_impact' || answers.q6 === 'definitely'
+          ? 'high'
+          : answers.q7 === 'lower_cost'
+          ? 'moderate'
+          : 'high';
+
+      let budgetPref = 15000;
+      if (answers.q7 === 'lower_cost' || answers.q5 === 'cheaper') budgetPref = 8000;
+      else if (answers.q7 === 'better_exp' || answers.q5 === 'comfortable') budgetPref = 35000;
+
+      let prefTransport = 'Train';
+      if (answers.q5 === 'greener') prefTransport = 'Train';
+      else if (answers.q5 === 'cheaper') prefTransport = 'Public Transport';
+      else if (answers.q5 === 'faster') prefTransport = 'Flight';
+      else if (answers.q5 === 'comfortable') prefTransport = 'Scenic Train';
 
       const profilePayload = {
-        eco_priority: answers.ecoPriority,
-        budget_preference: parseInt(answers.budget, 10) || 18000,
-        preferred_transport: answers.transport,
-        home_city: homeCityVal,
+        eco_priority: ecoPriority,
+        budget_preference: budgetPref,
+        preferred_transport: prefTransport,
       };
 
       // 1. Persist to Django UserProfile in PostgreSQL
@@ -273,57 +180,46 @@ export default function Onboarding() {
         console.warn('Backend profile update note:', err.message);
       }
 
-      // 2. If accessibility options were chosen, persist to Django AccessibilityProfile
-      if (answers.accessibility !== 'none') {
-        try {
-          const accPayload = {
-            wheelchair_required: answers.accessibility === 'wheelchair',
-            step_free_required:
-              answers.accessibility === 'step_free' ||
-              answers.accessibility === 'wheelchair',
-            reduced_walking: answers.accessibility === 'reduced_walking',
-            accessible_venue_required: answers.accessibility === 'wheelchair',
-          };
-          await api.post('/api/accessibility/profile/', accPayload);
-        } catch (err) {
-          console.warn('Backend accessibility profile note:', err.message);
-        }
-      }
-
-      // 3. Update localStorage session & user preferences cache
+      // 2. Update user preferences in localStorage
       const prefData = {
-        ecoPriority: answers.ecoPriority,
-        budget: `₹${parseInt(answers.budget, 10).toLocaleString()}`,
-        transportPreference: answers.transport,
-        accessibility:
-          answers.accessibility === 'none' ? 'Standard' : 'Special Assistance Required',
-        homeCity: homeCityVal,
-        travelStyle: answers.style,
-        travelGroup: answers.group,
+        destinationVibe: answers.q1,
+        tripStyle: answers.q2,
+        firstExperience: answers.q3,
+        travelPace: answers.q4,
+        transitPreference: answers.q5,
+        greenPatience: answers.q6,
+        corePriority: answers.q7,
+        ecoPriority: ecoPriority === 'high' ? 'High' : 'Moderate',
+        budget: `₹${budgetPref.toLocaleString()}`,
+        transportPreference: prefTransport,
+        accessibility: 'Standard',
       };
       localStorage.setItem('ecotrail_user_preferences', JSON.stringify(prefData));
 
       if (user?.uid) {
         localStorage.setItem(`ecotrail_onboarding_completed_${user.uid}`, 'true');
+        localStorage.setItem(
+          `ecotrail_onboarding_answers_${user.uid}`,
+          JSON.stringify(answers)
+        );
       }
 
-      // 4. Update session object in localStorage so Home picks it up immediately
+      // 3. Update session object in localStorage so Home/Dashboard reflects it immediately
       const savedSession = localStorage.getItem('ecotrail_session');
       if (savedSession) {
         try {
           const parsed = JSON.parse(savedSession);
           parsed.profile = {
             ...(parsed.profile || {}),
-            eco_priority: answers.ecoPriority,
-            budget_preference: parseInt(answers.budget, 10),
-            preferred_transport: answers.transport,
-            home_city: homeCityVal,
+            eco_priority: ecoPriority,
+            budget_preference: budgetPref,
+            preferred_transport: prefTransport,
           };
           localStorage.setItem('ecotrail_session', JSON.stringify(parsed));
         } catch (e) {}
       }
 
-      // 5. Navigate to Dashboard
+      // 4. Navigate to Dashboard
       navigate('/dashboard', { replace: true });
     } catch (err) {
       console.error('Failed to complete onboarding:', err);
@@ -331,13 +227,6 @@ export default function Onboarding() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleSkip = () => {
-    if (user?.uid) {
-      localStorage.setItem(`ecotrail_onboarding_completed_${user.uid}`, 'true');
-    }
-    navigate('/dashboard', { replace: true });
   };
 
   const displayName =
@@ -353,20 +242,16 @@ export default function Onboarding() {
 
       <header className="onboarding-header">
         <div className="onboarding-header-inner">
-          <div className="logo">
-            <span>●</span> EcoTrail <span>2.0</span>
+          {/* Logo shifted to the far left corner - slightly bigger */}
+          <div className="onboarding-logo-corner">
+            <EcoTrailBrandLogo size={38} fontSize="26px" color="#0b6c57" />
           </div>
+
+          {/* Welcome badge shifted to the right side */}
           <div className="onboarding-header-actions">
             <span className="onboarding-user-badge">
               👋 Welcome, {displayName}
             </span>
-            <button
-              type="button"
-              className="onboarding-skip-btn"
-              onClick={handleSkip}
-            >
-              Skip to Dashboard →
-            </button>
           </div>
         </div>
 
@@ -389,97 +274,44 @@ export default function Onboarding() {
           </div>
 
           <div className="onboarding-card">
-            <h1 className="onboarding-title">{currentQ.title}</h1>
-            <p className="onboarding-subtitle">{currentQ.subtitle}</p>
+            {/* Question title without small-font theory or subtitle */}
+            <h1 className="onboarding-title clean-title">{currentQ.title}</h1>
 
-            {/* Render City Picker for Q7 or Option Cards for Q1-Q6 */}
-            {currentQ.isCityPicker ? (
-              <div className="onboarding-city-picker">
-                <div className="onboarding-city-grid">
-                  {currentQ.cities.map((city) => {
-                    const isSelected =
-                      answers.homeCity === city;
-                    return (
-                      <button
-                        key={city}
-                        type="button"
-                        className={`onboarding-city-btn ${isSelected ? 'selected' : ''}`}
-                        onClick={() => {
-                          setAnswers((prev) => ({
-                            ...prev,
-                            homeCity: city,
-                          }));
-                        }}
-                      >
-                        <span className="city-pin">⌖</span>
-                        <span className="city-name">{city}</span>
-                        {isSelected && <span className="city-check">✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
+            <div className="onboarding-options-grid">
+              {currentQ.options.map((opt) => {
+                const isSelected = answers[currentQ.id] === opt.id;
+                const IllustrationComponent = opt.Illustration;
 
-                <div className="onboarding-custom-city">
-                  <label htmlFor="custom-city-input">
-                    Starting from another city?
-                  </label>
-                  <div className="input-icon">
-                    <span>📍</span>
-                    <input
-                      id="custom-city-input"
-                      type="text"
-                      placeholder="Type your departure city (e.g. Chandigarh, Kochi, Jaipur)"
-                      value={answers.customCity}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setAnswers((prev) => ({
-                          ...prev,
-                          homeCity: 'other',
-                          customCity: val,
-                        }));
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="onboarding-options-grid">
-                {currentQ.options.map((opt) => {
-                  const isSelected = answers[currentQ.id] === opt.id;
-                  return (
-                    <div
-                      key={opt.id}
-                      className={`onboarding-option-card ${isSelected ? 'selected' : ''}`}
-                      onClick={() => handleSelectOption(opt.id)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          handleSelectOption(opt.id);
-                        }
-                      }}
-                    >
-                      <div className="option-icon-wrap">
-                        <span className="option-icon">{opt.icon}</span>
-                      </div>
-                      <div className="option-text-wrap">
-                        <div className="option-header-row">
-                          <h3 className="option-label">{opt.label}</h3>
-                          {opt.val && <span className="option-val-tag">{opt.val}</span>}
-                          {opt.badge && (
-                            <span className="option-badge">{opt.badge}</span>
-                          )}
-                        </div>
-                        <p className="option-desc">{opt.desc}</p>
-                      </div>
-                      <div className="option-radio-indicator">
-                        <div className="radio-inner" />
-                      </div>
+                return (
+                  <div
+                    key={opt.id}
+                    className={`onboarding-option-card ${isSelected ? 'selected' : ''}`}
+                    onClick={() => handleSelectOption(opt.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleSelectOption(opt.id);
+                      }
+                    }}
+                  >
+                    {/* Illustrated Vector Icon beside the specific option */}
+                    <div className="option-icon-wrap illustrated">
+                      <IllustrationComponent />
                     </div>
-                  );
-                })}
-              </div>
-            )}
+
+                    {/* Specific option title only - no extra theory or description */}
+                    <div className="option-text-wrap">
+                      <h3 className="option-label clean-label">{opt.label}</h3>
+                    </div>
+
+                    <div className="option-radio-indicator">
+                      <div className="radio-inner" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
             {/* Bottom Actions */}
             <div className="onboarding-footer">
@@ -501,8 +333,6 @@ export default function Onboarding() {
                 >
                   {isSubmitting ? (
                     'Personalizing your experience...'
-                  ) : currentStep === totalSteps - 1 ? (
-                    <>Complete &amp; Open Dashboard <b>→</b></>
                   ) : (
                     <>Continue <b>→</b></>
                   )}

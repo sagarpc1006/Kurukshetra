@@ -187,6 +187,32 @@ export default function RecommendationCard({ option, isTopPick = false }) {
         >
           {showMath ? '▲ Hide Math' : '▼ Show Your Math'}
         </button>
+
+        {(mode.includes('train') || mode.includes('rail')) && (
+          <a
+            href="https://www.irctc.co.in"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rec-official-book-link"
+            style={{
+              marginLeft: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              fontSize: '12px',
+              fontWeight: '600',
+              color: '#0b6c57',
+              textDecoration: 'none',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              background: '#eef7f1',
+              border: '1px solid #c4decb',
+              transition: 'all 0.18s ease'
+            }}
+          >
+            <span>Book on IRCTC ↗</span>
+          </a>
+        )}
       </div>
 
       {/* Why Recommended / Key Deterministic Facts */}

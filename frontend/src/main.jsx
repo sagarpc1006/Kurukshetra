@@ -5,17 +5,63 @@ import { AuthProvider, useAuth, getFriendlyErrorMessage } from './context/AuthCo
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Trips from './pages/Trips';
-import Profile from './pages/Profile';
+import MyProfile from './pages/MyProfile';
+import TravelPreferences from './pages/TravelPreferences';
+import SettingsPage from './pages/SettingsPage';
 import Onboarding from './pages/Onboarding';
+import Planner from './pages/Planner';
+import Discover from './pages/Discover';
+import TravelAssistant from './components/TravelAssistant';
+import AppLayout from './components/AppLayout';
+import Logo, { EcoTrailBrandLogo } from './components/BrandLogo';
 import './styles.css';
 
-const places = [
-  {name:'Munnar', type:'Tea country', img:'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?auto=format&fit=crop&w=900&q=80', rating:'4.9', tag:'Low-impact stay'},
-  {name:'Coorg', type:'Forest trails', img:'https://images.unsplash.com/photo-1580974852861-c381510bc98f?auto=format&fit=crop&w=900&q=80', rating:'4.8', tag:'Accessible'},
-  {name:'Hampi', type:'Living heritage', img:'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=900&q=80', rating:'4.7', tag:'Verified clean'}
-];
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80';
 
-function Logo(){ return <Link className="logo" to="/"><span>◉</span> eco<span>trail</span></Link> }
+const places = [
+  {
+    name: 'Munnar',
+    type: 'Tea country',
+    img: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=900&q=80',
+    rating: '4.9',
+    tag: 'Low-impact stay'
+  },
+  {
+    name: 'Coorg',
+    type: 'Forest trails',
+    img: 'https://images.unsplash.com/photo-1588714477688-cf28a50e94f7?auto=format&fit=crop&w=900&q=80',
+    rating: '4.8',
+    tag: 'Accessible'
+  },
+  {
+    name: 'Hampi',
+    type: 'Living heritage',
+    img: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=900&q=80',
+    rating: '4.7',
+    tag: 'Verified clean'
+  },
+  {
+    name: 'Alleppey',
+    type: 'Backwater canals',
+    img: 'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?auto=format&fit=crop&w=900&q=80',
+    rating: '4.9',
+    tag: 'Low-impact stay'
+  },
+  {
+    name: 'Spiti',
+    type: 'Himalayan valley',
+    img: 'https://images.unsplash.com/photo-1586861635167-e5223aadc9fe?auto=format&fit=crop&w=900&q=80',
+    rating: '4.8',
+    tag: 'Accessible'
+  },
+  {
+    name: 'Pondicherry',
+    type: 'French heritage coast',
+    img: 'https://images.unsplash.com/photo-1589308078059-be1415eab4c3?auto=format&fit=crop&w=900&q=80',
+    rating: '4.7',
+    tag: 'Verified clean'
+  }
+];
 
 function Navbar({ onLogin = () => {}, onSignup = () => {} } = {}){
   const { isAuthenticated } = useAuth();
@@ -37,7 +83,7 @@ function Navbar({ onLogin = () => {}, onSignup = () => {} } = {}){
 
   return (
     <header className={`nav${scrolled ? ' nav--scrolled' : ''}`}>
-      <Logo/>
+      <Logo color="#ffffff" size={38} fontSize="26px" />
 
       {/* Desktop nav links */}
       <nav className="nav-links">
@@ -109,7 +155,7 @@ function Navbar({ onLogin = () => {}, onSignup = () => {} } = {}){
   );
 }
 
-function Footer(){return <footer><Logo/><p>Better journeys leave lighter footprints.</p><div><a href="#">Privacy</a><a href="#">Help centre</a><a href="#">Instagram</a></div></footer>}
+function Footer(){return <footer><Logo color="#0b6c57" size={34} fontSize="24px"/><p>Better journeys leave lighter footprints.</p><div><a href="#">Privacy</a><a href="#">Help centre</a><a href="#">Instagram</a></div></footer>}
 function Pill({children}){return <span className="pill">{children}</span>}
 
 const faqs = [
@@ -258,7 +304,7 @@ function AuthModal({ mode, onClose }) {
       <div className="modal-panel">
         <div className="auth-visual">
           <div className="auth-visual-top">
-            <Logo/>
+            <Logo color="#ffffff" size={34} fontSize="24px"/>
             <span className="auth-badge">✦ Trusted by 40,000+ travellers</span>
           </div>
           <div className="auth-visual-center">
@@ -383,7 +429,7 @@ function Auth({signup=false}){
     <main className="auth">
       <div className="auth-visual">
         <div className="auth-visual-top">
-          <Logo/>
+          <Logo color="#ffffff" size={34} fontSize="24px"/>
           <span className="auth-badge">✦ Trusted by 40,000+ travellers</span>
         </div>
         <div className="auth-visual-center">
@@ -400,7 +446,7 @@ function Auth({signup=false}){
       <section className="auth-form">
         <Link className="back" to="/">← Back to home</Link>
         <div className="form-box">
-          <Logo/>
+          <Logo color="#0b6c57" size={34} fontSize="24px" style={{ marginBottom: '18px' }}/>
           <h2>{signup ? 'Create your account' : 'Welcome back'}</h2>
           <p>{signup ? 'Start planning journeys that matter.' : 'Your next thoughtful journey is waiting.'}</p>
           
@@ -466,67 +512,90 @@ function Auth({signup=false}){
   );
 }
 
-const Side = () => {
-  const { logout } = useAuth();
-  const nav = useNavigate();
 
-  const handleLogout = async (e) => {
-    e.preventDefault();
-    await logout();
-    nav('/login');
-  };
-
-  return (
-    <aside className="sidebar">
-      <Logo/>
-      <div className="side-links">
-        <NavLink to="/dashboard">▦ Overview</NavLink>
-        <NavLink to="/planner">⌁ Plan a trip</NavLink>
-        <NavLink to="/discover">⌕ Discover</NavLink>
-        <NavLink to="/saved">♡ Saved places</NavLink>
-      </div>
-      <div className="side-bottom">
-        <NavLink to="/profile">◎ Profile & settings</NavLink>
-        <a href="#logout" onClick={handleLogout}>↪ Log out</a>
-      </div>
-    </aside>
-  );
-};
-
-function AppLayout({children}){
-  const { user, profile } = useAuth();
-  const initial = (user?.displayName || profile?.name || user?.email || 'A')[0].toUpperCase();
-
-  return (
-    <div className="app-shell">
-      <Side/>
-      <main className="app-main">
-        <header className="app-head">
-          <div className="search">⌕ Search journeys, places...</div>
-          <div>⌁ <span className="profile-dot">{initial}</span></div>
-        </header>
-        {children}
-      </main>
-    </div>
-  );
-}
 
 function Dashboard(){
   const { user, profile } = useAuth();
-  const displayName = user?.displayName || profile?.name || (user?.email ? user.email.split('@')[0] : 'Traveler');
+  const displayName = user?.displayName || profile?.name || (user?.email ? user.email.split('@')[0] : 'Yashraj Gadilkar');
+  const [activePrompt, setActivePrompt] = useState('');
+
+  const handleTriggerPrompt = (promptText) => {
+    setActivePrompt(promptText);
+    const el = document.getElementById('ai-assistant-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <AppLayout>
       <section className="dash-hero">
-        <div>
-          <Pill>THURSDAY, 11 SEPTEMBER</Pill>
-          <h1>Good morning, {displayName} <i>✦</i></h1>
-          <p>Where will your next better journey take you?</p>
-          <Link className="btn" to="/planner">Plan a trip <b>↗</b></Link>
+        {/* Left Content */}
+        <div className="dash-hero-left">
+          <span className="hero-date-pill">THURSDAY, 11 SEPTEMBER</span>
+          <h1 className="dash-hero-title">
+            Good morning, {displayName}{' '}
+            <span className="hero-sparkle-icon" aria-hidden="true">✦</span>
+          </h1>
+          <p className="dash-hero-subtitle">
+            New places. Greener choices. A better tomorrow.
+          </p>
+          <Link className="hero-plan-btn" to="/planner">
+            <span>Plan a trip</span>
+            <span className="hero-plan-arrow">↗</span>
+          </Link>
+          <div className="dash-hero-footer-tagline">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="tagline-leaf-icon" aria-hidden="true">
+              <path d="M17.5 3C9 3 5 8.5 5 14C5 17.5 7.5 20.5 11 21C11.5 17.5 13.5 13.5 18 11.5C18 11.5 16 14.5 14.5 17C18.5 15.5 20.5 11 20 6C19.5 4 18.5 3 17.5 3Z" fill="#0b6c57"/>
+            </svg>
+            <span>Travel Today &bull; Protect Tomorrow</span>
+          </div>
         </div>
-        <div className="dash-art">✈<span>Mumbai</span><span>Goa</span></div>
+
+        {/* Center Editorial Quote over the water */}
+        <div className="dash-hero-center-quote" aria-hidden="true">
+          <div className="quote-text">
+            <span>Same</span>
+            <span>Places</span>
+            <span>Greener</span>
+            <span>Paths</span>
+          </div>
+          <svg className="quote-underline-svg" width="56" height="8" viewBox="0 0 56 8" fill="none">
+            <path d="M2 4.5C16 2 36 2 54 5.5" stroke="#16a34a" strokeWidth="2.8" strokeLinecap="round"/>
+          </svg>
+        </div>
+
+        {/* Right Floating Frosted-Glass Boxes (Matching Equal Dimensions) */}
+        <div className="dash-hero-floating-boxes">
+          {/* BOX 1 — ROUTE */}
+          <div className="hero-glass-box">
+            <div className="hero-glass-badge">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 16V14L13 9V3.5C13 2.67 12.33 2 11.5 2C10.67 2 10 2.67 10 3.5V9L2 14V16L10 13.5V19L8 20.5V22L11.5 21L15 22V20.5L13 19V13.5L21 16Z" fill="#0c4a3e"/>
+              </svg>
+            </div>
+            <div className="hero-glass-content">
+              <span className="hero-route-title">Mumbai &nbsp;→&nbsp; Goa</span>
+            </div>
+          </div>
+
+          {/* BOX 2 — ECO-TWIN IMPACT */}
+          <div className="hero-glass-box">
+            <div className="hero-glass-badge leaf-badge">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17.5 3C9 3 5 8.5 5 14C5 17.5 7.5 20.5 11 21C11.5 17.5 13.5 13.5 18 11.5C18 11.5 16 14.5 14.5 17C18.5 15.5 20.5 11 20 6C19.5 4 18.5 3 17.5 3Z" fill="#16a34a"/>
+              </svg>
+            </div>
+            <div className="hero-glass-content">
+              <div className="hero-impact-stat">~ 46% lower CO₂</div>
+              <div className="hero-impact-sub">with Eco-Twin travel</div>
+            </div>
+          </div>
+        </div>
       </section>
-      <section className="dash-grid">
+
+      {/* Main Workspace */}
+      <section className="dash-grid" style={{ marginTop: '28px' }}>
         <div className="section-title">
           <div><Pill>YOUR TRIPS</Pill><h2>Keep exploring</h2></div>
           <Link to="/saved">View all →</Link>
@@ -545,25 +614,44 @@ function Dashboard(){
           </div>
         </div>
       </section>
+
       <section>
         <div className="section-title">
           <div><Pill>FOR YOUR NEXT ESCAPE</Pill><h2>Made for you</h2></div>
           <Link to="/discover">Discover more →</Link>
         </div>
-        <div className="place-grid">{places.map(p=><Place key={p.name} p={p}/>)}</div>
+        <div className="place-grid">{places.slice(0, 3).map(p=><Place key={p.name} p={p}/>)}</div>
       </section>
     </AppLayout>
   );
 }
 
 function TripCard(){return <div className="trip-card"><div className="trip-photo"></div><div><Pill>UPCOMING · 24–28 SEP</Pill><h3>Coastal slow days in Goa</h3><p>2 travellers · Mumbai → Goa</p><div className="trip-stats"><span>♧ 46% lower CO₂</span><span>✓ All stays verified</span></div></div><b>→</b></div>}
-function Place({p}){return <Link to="/discover" className="place"><img src={p.img} alt={p.name}/><div><Pill>{p.tag}</Pill><h3>{p.name}</h3><p>{p.type} <span>★ {p.rating}</span></p></div></Link>}
+function Place({p}){
+  return (
+    <Link to="/discover" className="place">
+      <img
+        src={p.img}
+        alt={p.name}
+        onError={(e) => {
+          if (e.currentTarget.src !== FALLBACK_IMAGE) {
+            e.currentTarget.src = FALLBACK_IMAGE;
+          }
+        }}
+      />
+      <div>
+        <Pill>{p.tag}</Pill>
+        <h3>{p.name}</h3>
+        <p>{p.type} <span>★ {p.rating}</span></p>
+      </div>
+    </Link>
+  );
+}
 
-function Planner(){const nav=useNavigate(); return <AppLayout><section className="page-top"><Pill>PLAN A JOURNEY</Pill><h1>Let's make this trip count.</h1><p>Tell us what matters to you. We’ll shape an Eco-Twin around it.</p></section><section className="planner"><div className="planner-form"><label>Where are you going?<div className="input-icon">⌖ <input placeholder="Search a destination" defaultValue="Goa, India"/></div></label><div className="two"><label>Leaving from<input defaultValue="Mumbai, India"/></label><label>Travel dates<input defaultValue="24 Sep — 28 Sep"/></label></div><label>Who’s going?<input defaultValue="2 travellers"/></label><h3>What matters most?</h3><div className="choices"><button className="selected" type="button">♧ Lower impact</button><button type="button">♿ Accessibility</button><button type="button">₹ Budget-friendly</button><button type="button">☼ More comfort</button></div><button className="btn full" onClick={()=>nav('/results')}>Find my Eco-Twin <b>→</b></button></div><aside className="planning-note"><span>✦</span><h3>Travel your way.</h3><p>Your preferences help us find options that feel right — not just look good on paper.</p><ul><li>✓ Transport comparisons</li><li>✓ Verified stays</li><li>✓ Weather-aware ideas</li></ul></aside></section></AppLayout>}
 function Results(){return <AppLayout><section className="page-top compact"><Pill>MUMBAI → GOA · 24–28 SEP</Pill><h1>Your journey, <i>considered.</i></h1><p>We found options that balance your priorities beautifully.</p></section><div className="results-tabs"><button className="active">Recommended</button><button>Fastest</button><button>Lowest cost</button><button>Lowest impact</button></div><section className="results"><div><Result type="eco"/><Result type="regular"/></div><aside className="result-aside"><Pill>YOUR IMPACT</Pill><h3>Choose the Eco-Twin</h3><div className="big-number">−46%<span>less CO₂</span></div><p>Choosing train over flight saves the equivalent of 14 kg of coal burned.</p><Link className="arrow-link" to="/comparison">See full comparison →</Link></aside></section></AppLayout>}
 function Result({type}){let eco=type==='eco'; return <article className={'result '+type}><div className="result-img"></div><div className="result-content"><Pill>{eco?'ECOTRAIL PICK':'REGULAR OPTION'}</Pill><h2>{eco?'Konkan Railway':'Direct flight'}</h2><p>{eco?'Mumbai CSMT → Madgaon · Overnight':'Mumbai → Goa · 1h 20m'}</p><div className="result-details"><span>◷ {eco?'10h 45m':'3h 40m'}</span><span>₹ {eco?'1,280':'5,180'}</span><span>♧ {eco?'35':'130'} kg CO₂</span></div>{eco&&<div className="verified">✓ Accessibility & hygiene details verified</div>}</div><button>⌄</button></article>}
 function Comparison(){return <AppLayout><section className="page-top compact"><Pill>YOUR ECO-TWIN</Pill><h1>Same destination.<br/><i>Better way to get there.</i></h1></section><section className="compare"><div className="compare-head"><div>✈ <b>Regular trip</b><span>Direct flight</span></div><div className="eco-head">♧ <b>Eco-Twin</b><span>Konkan Railway</span></div></div>{[['Carbon emissions','130 kg CO₂','35 kg CO₂','73% lower'],['Total cost','₹5,180','₹1,280','₹3,900 saved'],['Travel time','3h 40m','10h 45m','+7h 05m'],['Comfort','Standard seat','Sleeper cabin','More room'],['Accessibility','Limited info','Verified access','Checked for you']].map(x=><div className="compare-row" key={x[0]}><span>{x[0]}</span><b>{x[1]}</b><b className="green">{x[2]} <small>{x[3]}</small></b></div>)}</section><div className="compare-cta"><span>♧</span><div><b>Your Eco-Twin saves 95 kg of CO₂</b><p>That's the clearest route to a lighter journey.</p></div><Link className="btn" to="/saved">Save this trip <b>→</b></Link></div></AppLayout>}
-function Discover(){return <AppLayout><section className="discover-title"><Pill>EXPLORE MINDFULLY</Pill><h1>Places that give back.</h1><p>Find inspiring destinations with lighter footprints and richer experiences.</p><div className="discover-search">⌕ <input placeholder="Where do you want to go?"/><button>Search</button></div></section><div className="filters"><button className="active">For you</button><button>Nature</button><button>Culture</button><button>Beach</button><button>Weekend escape</button><button>♿ Accessible</button></div><div className="place-grid large">{places.concat(places).map((p,i)=><Place key={i} p={{...p,name:i>2?['Alleppey','Spiti','Pondicherry'][i-3]:p.name}}/>)}</div></AppLayout>}
+
 function Saved(){return <AppLayout><section className="page-top compact"><Pill>YOUR COLLECTION</Pill><h1>Saved for <i>some day.</i></h1><p>All the little possibilities waiting for the right moment.</p></section><div className="saved-tabs"><button className="active">Trips (2)</button><button>Places (12)</button></div><div className="saved-list"><TripCard/><TripCard/></div></AppLayout>}
 
 
@@ -578,11 +666,13 @@ function App(){
 
         {/* Protected Routes */}
         <Route path="/onboarding" element={<ProtectedRoute><Onboarding/></ProtectedRoute>}/>
-        <Route path="/dashboard" element={<ProtectedRoute><Home/></ProtectedRoute>}/>
-        <Route path="/home" element={<ProtectedRoute><Home/></ProtectedRoute>}/>
-        <Route path="/trips" element={<ProtectedRoute><Trips/></ProtectedRoute>}/>
-        <Route path="/saved" element={<ProtectedRoute><Trips/></ProtectedRoute>}/>
-        <Route path="/profile" element={<ProtectedRoute><Profile/></ProtectedRoute>}/>
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard/></ProtectedRoute>}/>
+        <Route path="/home" element={<ProtectedRoute><Dashboard/></ProtectedRoute>}/>
+        <Route path="/trips" element={<ProtectedRoute><Saved/></ProtectedRoute>}/>
+        <Route path="/saved" element={<ProtectedRoute><Saved/></ProtectedRoute>}/>
+        <Route path="/profile" element={<ProtectedRoute><MyProfile/></ProtectedRoute>}/>
+        <Route path="/preferences" element={<ProtectedRoute><TravelPreferences/></ProtectedRoute>}/>
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage/></ProtectedRoute>}/>
         <Route path="/planner" element={<ProtectedRoute><Planner/></ProtectedRoute>}/>
         <Route path="/results" element={<ProtectedRoute><Results/></ProtectedRoute>}/>
         <Route path="/comparison" element={<ProtectedRoute><Comparison/></ProtectedRoute>}/>

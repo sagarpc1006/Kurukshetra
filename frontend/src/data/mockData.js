@@ -43,7 +43,7 @@ export const mockRecentTrips = [
     ecoScore: 88,
     status: 'Saved',
     stays: 'Tea Valley Low-Impact Lodge',
-    coverImage: 'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?auto=format&fit=crop&w=600&q=80',
+    coverImage: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=600&q=80',
   },
 ];
 

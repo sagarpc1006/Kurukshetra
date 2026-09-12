@@ -8,8 +8,198 @@ import ItineraryView from './ItineraryView';
 import { sendChatMessage } from '../services/chatAPI';
 import { saveTrip } from '../services/tripAPI';
 
-export default function TravelAssistant({ onTripSaved }) {
+/**
+ * Parses inline markdown: **bold**, [label](url), [label] (url), standalone URLs, `code`
+ */
+function renderInlineFormatting(str) {
+  if (!str) return '';
+  const tokens = [];
+  // Matches:
+  // 1. [label](url) or [label] (url)
+  // 2. **bold**
+  // 3. `code`
+  // 4. Standalone https?:// URLs
+  const regex = /(\[([^\]]+)\]\s*\((https?:\/\/[^\s\)]+)\))|(\*\*([^*]+)\*\*)|(`([^`]+)`)|((https?:\/\/[^\s\)]+))/g;
+  let lastIndex = 0;
+  let match;
+  let key = 0;
+
+  while ((match = regex.exec(str)) !== null) {
+    if (match.index > lastIndex) {
+      tokens.push(str.substring(lastIndex, match.index));
+    }
+
+    if (match[1]) {
+      // Link [text](url) or [text] (url)
+      const linkLabel = match[2];
+      const linkUrl = match[3];
+      const isPkg = /package|darshan|tour|irctctourism|ttdevasthanams|aptourism|ktdc|gtdc|kstdc|rtdc|uptourism/i.test(linkLabel) ||
+                    /package|tourpckage|darshan|ttdevasthanams|irctctourism/i.test(linkUrl);
+      tokens.push(
+        <a
+          key={key++}
+          href={linkUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`ai-inline-link ${isPkg ? 'ai-package-link' : ''}`}
+        >
+          {isPkg ? '⭐ ' : ''}{linkLabel} ↗
+        </a>
+      );
+    } else if (match[4]) {
+      // Bold **bold**
+      tokens.push(<strong key={key++}>{match[5]}</strong>);
+    } else if (match[6]) {
+      // Code `code`
+      tokens.push(<code key={key++} className="ai-inline-code">{match[7]}</code>);
+    } else if (match[8]) {
+      // Standalone URL
+      const cleanUrl = match[8].replace(/[.,;:!?)]+$/, '');
+      tokens.push(
+        <a
+          key={key++}
+          href={cleanUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ai-inline-link"
+        >
+          {cleanUrl.replace(/^https?:\/\/(www\.)?/, '')} ↗
+        </a>
+      );
+      if (cleanUrl.length < match[8].length) {
+        tokens.push(match[8].substring(cleanUrl.length));
+      }
+    }
+
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < str.length) {
+    tokens.push(str.substring(lastIndex));
+  }
+
+  return tokens.length > 0 ? tokens : str;
+}
+
+/**
+ * Parses raw AI text into structured blocks with proper symmetry, lists, and section headers.
+ */
+function parseAiBlocks(raw) {
+  if (!raw) return [];
+  // Ensure bullets/numbered items glued onto a line are split cleanly onto their own lines
+  let str = raw.replace(/([^\n])\s*([•\*]\s+)/g, '$1\n$2');
+  str = str.replace(/([^\n])\s*(\d+\.\s+)/g, '$1\n$2');
+
+  const lines = str.split('\n');
+  const blocks = [];
+  let currentList = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) {
+      if (currentList) {
+        blocks.push({ type: 'list', items: currentList });
+        currentList = null;
+      }
+      continue;
+    }
+
+    // Check if line is a bullet item (*, -, •, or 1.)
+    const listMatch = line.match(/^([•\*\-]\s+|\d+\.\s+)(.+)$/);
+    if (listMatch) {
+      if (!currentList) currentList = [];
+      currentList.push(listMatch[2].trim());
+      continue;
+    }
+
+    // If we were in a list and hit a non-list line, close the list
+    if (currentList) {
+      blocks.push({ type: 'list', items: currentList });
+      currentList = null;
+    }
+
+    // Check if header
+    if (line.startsWith('### ')) {
+      blocks.push({ type: 'h4', text: line.replace(/^###\s+/, '').trim() });
+    } else if (line.startsWith('## ')) {
+      blocks.push({ type: 'h3', text: line.replace(/^##\s+/, '').trim() });
+    } else if (line.startsWith('# ')) {
+      blocks.push({ type: 'h2', text: line.replace(/^#\s+/, '').trim() });
+    } else if (
+      /^[🚆🌿⚡🏖️🏛️🚲💰📍🎯🌱♿✈️🚌][\s\S]+$/.test(line) ||
+      (/^[A-Z][\w\s&–-]+:$/.test(line) && line.length < 80)
+    ) {
+      // Line starts with travel emoji or short section title ending in colon -> styled section header!
+      blocks.push({ type: 'section_title', text: line });
+    } else {
+      blocks.push({ type: 'para', text: line });
+    }
+  }
+
+  if (currentList) {
+    blocks.push({ type: 'list', items: currentList });
+  }
+
+  return blocks;
+}
+
+/**
+ * Formats AI markdown responses with headers, symmetrical lists, and official links.
+ */
+function FormattedAiResponse({ text }) {
+  if (!text) return null;
+
+  const blocks = parseAiBlocks(text);
+
+  return (
+    <div className="ai-response-formatted">
+      {blocks.map((block, bIdx) => {
+        if (block.type === 'h2') {
+          return (
+            <h3 key={bIdx} className="ai-subheading" style={{ fontSize: '17px' }}>
+              {renderInlineFormatting(block.text)}
+            </h3>
+          );
+        }
+        if (block.type === 'h3' || block.type === 'h4') {
+          return (
+            <h4 key={bIdx} className="ai-subheading">
+              {renderInlineFormatting(block.text)}
+            </h4>
+          );
+        }
+        if (block.type === 'section_title') {
+          return (
+            <div key={bIdx} className="ai-section-header">
+              <span className="ai-section-title">{renderInlineFormatting(block.text)}</span>
+            </div>
+          );
+        }
+        if (block.type === 'list') {
+          return (
+            <ul key={bIdx} className="ai-symmetric-list">
+              {block.items.map((item, iIdx) => (
+                <li key={iIdx} className="ai-symmetric-item">
+                  <span className="ai-bullet-dot" aria-hidden="true">●</span>
+                  <span className="ai-item-text">{renderInlineFormatting(item)}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+        return (
+          <p key={bIdx} className="ai-para">
+            {renderInlineFormatting(block.text)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function TravelAssistant({ onTripSaved, externalPrompt }) {
   const [prompt, setPrompt] = useState('');
+  const [followupPrompt, setFollowupPrompt] = useState('');
   const [searchState, setSearchState] = useState('idle'); // 'idle' | 'loading' | 'success' | 'error'
   const [loadingStage, setLoadingStage] = useState(0);
   const [resultData, setResultData] = useState(null);
@@ -17,17 +207,27 @@ export default function TravelAssistant({ onTripSaved }) {
   const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
   const [saveMessage, setSaveMessage] = useState('');
   const textareaRef = useRef(null);
+  const followupRef = useRef(null);
+
+  useEffect(() => {
+    if (externalPrompt) {
+      setPrompt(externalPrompt);
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }
+  }, [externalPrompt]);
 
   // Progressive loading stages
   const STAGES = [
-    { title: 'Understanding your trip...', desc: 'Gemini AI parsing destinations, dates, budget & eco priority' },
-    { title: 'Finding travel options...', desc: 'Querying Duffel API for flight offers and transit availability' },
+    { title: 'Connecting to Gemini AI...', desc: 'Analyzing live sustainable travel parameters and destinations' },
+    { title: 'Querying official transit & flights...', desc: 'Checking real-time rail networks, Duffel flights and EV corridors' },
     { title: 'Checking ground routes...', desc: 'Analyzing road network and distance via OpenRouteService & OSM' },
-    { title: 'Checking local places...', desc: 'Discovering verified attractions & cultural sites via OpenTripMap' },
+    { title: 'Discovering verified attractions...', desc: 'Finding ASI monuments & certified eco-homestays via OpenTripMap' },
     { title: 'Checking real-time weather...', desc: 'Retrieving destination climate & forecast via OpenWeatherMap' },
-    { title: 'Scoring & ranking itineraries...', desc: 'Calculating deterministic Green & Accessible Scores (Carbon, Access, Cost, Time)' },
-    { title: 'Comparing Eco-Twin alternatives...', desc: 'Finding low-carbon, accessible multimodal alternative' },
-    { title: 'Assembling complete itinerary...', desc: 'Synthesizing day-by-day sustainable schedule' },
+    { title: 'Scoring & ranking itineraries...', desc: 'Calculating deterministic Green & Accessible Scores' },
+    { title: 'Comparing Eco-Twin alternatives...', desc: 'Finding verified low-carbon multimodal alternative' },
+    { title: 'Synthesizing live advice & official links...', desc: 'Curating authoritative government portals with zero markups' },
   ];
 
   useEffect(() => {
@@ -36,7 +236,7 @@ export default function TravelAssistant({ onTripSaved }) {
       setLoadingStage(0);
       timer = setInterval(() => {
         setLoadingStage((prev) => (prev < STAGES.length - 1 ? prev + 1 : prev));
-      }, 1200);
+      }, 1100);
     }
     return () => {
       if (timer) clearInterval(timer);
@@ -50,11 +250,12 @@ export default function TravelAssistant({ onTripSaved }) {
     }
   };
 
-  const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
-    const query = prompt.trim();
+  const handleSubmit = async (e, overrideQuery) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const query = (typeof overrideQuery === 'string' ? overrideQuery : prompt).trim();
     if (!query) return;
 
+    setPrompt(query);
     setSearchState('loading');
     setErrorMessage('');
     setSaveStatus('idle');
@@ -78,11 +279,24 @@ export default function TravelAssistant({ onTripSaved }) {
     }
   };
 
+  const handleFollowupSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (!followupPrompt.trim()) return;
+    const q = followupPrompt.trim();
+    setFollowupPrompt('');
+    handleSubmit(null, q);
+  };
+
+  const handleQuickFollowup = (text) => {
+    handleSubmit(null, text);
+  };
+
   const handleReset = () => {
     setSearchState('idle');
     setResultData(null);
     setErrorMessage('');
     setPrompt('');
+    setFollowupPrompt('');
     setLoadingStage(0);
     setSaveStatus('idle');
     setSaveMessage('');
@@ -150,6 +364,7 @@ export default function TravelAssistant({ onTripSaved }) {
   const recommendations = resultData?.recommendations || null;
   const ecoTwin = resultData?.eco_twin || null;
   const itinerary = resultData?.itinerary || null;
+  const officialLinks = resultData?.official_links || [];
 
   return (
     <div className="travel-assistant-card">
@@ -158,20 +373,17 @@ export default function TravelAssistant({ onTripSaved }) {
           <span className="ai-sparkle-icon" aria-hidden="true">✦</span>
           <h2>Plan your journey with EcoTrail</h2>
         </div>
-        <p className="assistant-header-desc">
-          Tell me where you want to go, your budget, preferences, or accessibility needs.
-        </p>
       </div>
 
       {/* STATE 1: IDLE or Form Input */}
-      {searchState !== 'loading' && (
+      {searchState !== 'loading' && searchState !== 'success' && (
         <form onSubmit={handleSubmit} className="assistant-form">
           <div className="assistant-input-shell">
             <textarea
               ref={textareaRef}
               rows={2}
               className="assistant-textarea"
-              placeholder="Try: Pune to Goa for 3 days under ₹10,000 with low carbon emissions..."
+              placeholder="Try: Find the greenest way to Goa with verified low-emission stays..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -202,7 +414,7 @@ export default function TravelAssistant({ onTripSaved }) {
             <div className="loading-pulse-ring"></div>
             <span className="loading-center-leaf">🌿</span>
           </div>
-          <h3>Finding real travel options...</h3>
+          <h3>Consulting real-time travel intelligence...</h3>
           <p className="current-stage-title">{STAGES[loadingStage].title}</p>
           <small className="current-stage-desc">{STAGES[loadingStage].desc}</small>
 
@@ -250,94 +462,154 @@ export default function TravelAssistant({ onTripSaved }) {
       {/* STATE 3: SUCCESS */}
       {searchState === 'success' && resultData && (
         <div className="search-state-result" role="region" aria-label="Extracted Travel Intent & Results">
-          {/* Assistant confirmation message */}
+          
+          {/* REAL-TIME AI ASSISTANT CONVERSATION BUBBLE */}
           <div className="assistant-response-bubble">
             <div className="assistant-avatar" aria-hidden="true">✦</div>
             <div className="assistant-bubble-content">
-              <strong>EcoTrail Assistant</strong>
-              <p>{resultData.message || 'I understood your trip and gathered travel options.'}</p>
-            </div>
-          </div>
-
-          {/* Structured Travel Intent Card */}
-          <div className="recommendation-result-box">
-            <div className="rec-top-banner">
-              <div>
-                <span className="rec-badge">STRUCTURED TRAVEL REQUEST (GEMINI AI)</span>
-                <h3>
-                  {intent.origin ? intent.origin : 'Departure'} → {intent.destination ? intent.destination : 'Destination'}
-                </h3>
-                <p className="rec-transport">
-                  {intent.duration_days ? `${intent.duration_days} Days Journey` : 'Trip duration not specified'}
-                  {intent.travel_dates ? ` · ${intent.travel_dates}` : ''}
-                </p>
-              </div>
-              <div className="rec-eco-badge">
-                <span className="eco-badge-score">
-                  {intent.eco_priority === 'high' ? 'High' : intent.eco_priority ? intent.eco_priority : 'Standard'}
+              <div className="assistant-bubble-header">
+                <strong>EcoTrail AI Assistant</strong>
+                <span className="live-realtime-pill">
+                  <span className="live-beacon-dot"></span> Live Real-Time AI · Verified Links
                 </span>
-                <span className="eco-badge-label">Eco Priority</span>
               </div>
+              <FormattedAiResponse text={resultData.ai_response || resultData.message} />
             </div>
-
-            {/* Extracted Details Grid */}
-            <div className="rec-metrics-grid">
-              <div className="rec-metric-item">
-                <span className="metric-label">📍 Origin</span>
-                <strong className="metric-value">{intent.origin || 'Not specified'}</strong>
-              </div>
-
-              <div className="rec-metric-item">
-                <span className="metric-label">🎯 Destination</span>
-                <strong className="metric-value">{intent.destination || 'Not specified'}</strong>
-              </div>
-
-              <div className="rec-metric-item">
-                <span className="metric-label">⏱️ Duration</span>
-                <strong className="metric-value">
-                  {intent.duration_days ? `${intent.duration_days} days` : 'Not specified'}
-                </strong>
-              </div>
-
-              <div className="rec-metric-item">
-                <span className="metric-label">💰 Budget</span>
-                <strong className="metric-value">
-                  {intent.budget != null ? `₹${Number(intent.budget).toLocaleString('en-IN')}` : 'Not specified'}
-                </strong>
-                <small>{intent.currency || 'INR'}</small>
-              </div>
-
-              <div className="rec-metric-item highlight-green">
-                <span className="metric-label">🌱 Eco Priority</span>
-                <strong className="metric-value">
-                  {intent.eco_priority ? intent.eco_priority.toUpperCase() : 'Standard'}
-                </strong>
-                <small className="metric-sub-green">
-                  {intent.eco_priority === 'high' ? 'Prioritizing lowest carbon options' : 'Default eco-balancing'}
-                </small>
-              </div>
-
-              <div className="rec-metric-item">
-                <span className="metric-label">♿ Accessibility</span>
-                <strong className={`metric-value small ${intent.accessibility_required ? 'bold-purple' : ''}`}>
-                  {intent.accessibility_required ? 'Required (Step-free / accessible)' : 'Not specified'}
-                </strong>
-                <small>
-                  {intent.accessibility_required ? 'Wheelchair & accessible transit requested' : 'Standard accessibility'}
-                </small>
-              </div>
-            </div>
-
-            {/* Weather status banner if unavailable */}
-            {travelData?.weather?.status === 'unavailable' && (
-              <div className="weather-notice-strip" style={{ marginTop: '10px', fontSize: '0.85rem', color: '#64748b' }}>
-                ℹ️ Weather data currently unavailable.
-              </div>
-            )}
           </div>
+
+          {/* VERIFIED OFFICIAL GOVERNMENT PACKAGES & TRANSIT WEBSITES SECTION */}
+          {officialLinks && officialLinks.length > 0 && (
+            <div className="official-portals-container">
+              <div className="official-portals-header">
+                <div className="portals-title-group">
+                  <span className="official-shield-icon" aria-hidden="true">🏛️</span>
+                  <div>
+                    <h4>Verified Official Government Packages &amp; Transit Portals</h4>
+                    <p>Genuine real-time packages, official fares, and direct access links with zero intermediary markup</p>
+                  </div>
+                </div>
+                <span className="govt-verified-badge">
+                  <span className="badge-dot">●</span> 100% Authentic Government Portals
+                </span>
+              </div>
+
+              <div className="official-portals-grid">
+                {officialLinks.map((link, idx) => (
+                  <div
+                    key={idx}
+                    className={`official-portal-card ${link.is_package ? 'package-highlight-card' : ''}`}
+                  >
+                    <div>
+                      <div className="portal-card-top">
+                        <span className={`portal-category-pill ${link.is_package ? 'category-package-pill' : ''}`}>
+                          {link.is_package ? '⭐ Official Package' : (link.category || 'Official Portal')}
+                        </span>
+                        <span className={`portal-badge-pill ${link.is_package ? 'badge-package-pill' : ''}`}>
+                          ✓ {link.badge || (link.is_package ? 'Govt Package' : 'Govt Verified')}
+                        </span>
+                      </div>
+                      <h5 className="portal-card-title">{link.name}</h5>
+                      <span className="portal-domain-tag">
+                        <span aria-hidden="true">🌐</span> {link.domain}
+                      </span>
+                      <p className="portal-card-desc">{link.description}</p>
+                    </div>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`portal-visit-btn ${link.is_package ? 'package-visit-btn' : ''}`}
+                    >
+                      <span>{link.is_package ? 'Access Official Package' : 'Visit Official Portal'}</span>
+                      <span className="portal-arrow-icon" aria-hidden="true">↗</span>
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* STRUCTURED TRAVEL REQUEST CARD (If destination is specified) */}
+          {intent?.destination && (
+            <div className="recommendation-result-box">
+              <div className="rec-top-banner">
+                <div>
+                  <span className="rec-badge">STRUCTURED TRAVEL REQUEST (GEMINI AI)</span>
+                  <h3>
+                    {intent.origin ? intent.origin : 'Departure'} → {intent.destination ? intent.destination : 'Destination'}
+                  </h3>
+                  <p className="rec-transport">
+                    {intent.duration_days ? `${intent.duration_days} Days Journey` : 'Trip duration not specified'}
+                    {intent.travel_dates ? ` · ${intent.travel_dates}` : ''}
+                  </p>
+                </div>
+                <div className="rec-eco-badge">
+                  <span className="eco-badge-score">
+                    {intent.eco_priority === 'high' ? 'High' : intent.eco_priority ? intent.eco_priority : 'Standard'}
+                  </span>
+                  <span className="eco-badge-label">Eco Priority</span>
+                </div>
+              </div>
+
+              {/* Extracted Details Grid */}
+              <div className="rec-metrics-grid">
+                <div className="rec-metric-item">
+                  <span className="metric-label">📍 Origin</span>
+                  <strong className="metric-value">{intent.origin || 'Not specified'}</strong>
+                </div>
+
+                <div className="rec-metric-item">
+                  <span className="metric-label">🎯 Destination</span>
+                  <strong className="metric-value">{intent.destination || 'Not specified'}</strong>
+                </div>
+
+                <div className="rec-metric-item">
+                  <span className="metric-label">⏱️ Duration</span>
+                  <strong className="metric-value">
+                    {intent.duration_days ? `${intent.duration_days} days` : 'Not specified'}
+                  </strong>
+                </div>
+
+                <div className="rec-metric-item">
+                  <span className="metric-label">💰 Budget</span>
+                  <strong className="metric-value">
+                    {intent.budget != null ? `₹${Number(intent.budget).toLocaleString('en-IN')}` : 'Not specified'}
+                  </strong>
+                  <small>{intent.currency || 'INR'}</small>
+                </div>
+
+                <div className="rec-metric-item highlight-green">
+                  <span className="metric-label">🌱 Eco Priority</span>
+                  <strong className="metric-value">
+                    {intent.eco_priority ? intent.eco_priority.toUpperCase() : 'Standard'}
+                  </strong>
+                  <small className="metric-sub-green">
+                    {intent.eco_priority === 'high' ? 'Prioritizing lowest carbon options' : 'Default eco-balancing'}
+                  </small>
+                </div>
+
+                <div className="rec-metric-item">
+                  <span className="metric-label">♿ Accessibility</span>
+                  <strong className={`metric-value small ${intent.accessibility_required ? 'bold-purple' : ''}`}>
+                    {intent.accessibility_required ? 'Required (Step-free / accessible)' : 'Not specified'}
+                  </strong>
+                  <small>
+                    {intent.accessibility_required ? 'Wheelchair & accessible transit requested' : 'Standard accessibility'}
+                  </small>
+                </div>
+              </div>
+
+              {/* Weather status banner if unavailable */}
+              {travelData?.weather?.status === 'unavailable' && (
+                <div className="weather-notice-strip" style={{ marginTop: '10px', fontSize: '0.85rem', color: '#64748b' }}>
+                  ℹ️ Weather data currently unavailable.
+                </div>
+              )}
+            </div>
+          )}
 
           {/* EMPTY RESULTS STATE */}
-          {recommendations?.results && recommendations.results.length === 0 && (
+          {intent?.destination && recommendations?.results && recommendations.results.length === 0 && (
             <div className="empty-results-box" role="status" style={{ padding: '24px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', margin: '16px 0', textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🔍</div>
               <h4 style={{ margin: '0 0 6px 0', color: '#1e293b' }}>No suitable travel options found</h4>
@@ -365,70 +637,115 @@ export default function TravelAssistant({ onTripSaved }) {
             <ItineraryView itinerary={itinerary} />
           )}
 
-          {/* SAVE TRIP TO DATABASE STRIP */}
-          <div className="save-trip-action-card" style={{
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(99, 102, 241, 0.08))',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            borderRadius: '14px',
-            padding: '20px 24px',
-            marginTop: '20px',
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '16px'
-          }}>
-            <div>
-              <div className="welcome-badge" style={{ marginBottom: '4px' }}>
-                <span>PERSISTENCE &amp; SHARING</span>
-              </div>
-              <h4 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '1.15rem' }}>
-                Ready to save this journey?
-              </h4>
-              <p style={{ margin: 0, color: '#475569', fontSize: '0.88rem' }}>
-                Store this personalized itinerary and verified Eco-Twin comparison in your collection in PostgreSQL.
-              </p>
-              {saveMessage && (
-                <div style={{
-                  marginTop: '10px',
-                  fontSize: '0.9rem',
-                  fontWeight: '500',
-                  color: saveStatus === 'saved' ? '#059669' : '#dc2626'
-                }}>
-                  {saveStatus === 'saved' ? '✓ ' : '⚠️ '}{saveMessage}
+          {/* SAVE TRIP TO DATABASE STRIP (If itinerary exists) */}
+          {itinerary && (
+            <div className="save-trip-action-card" style={{
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(99, 102, 241, 0.08))',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: '14px',
+              padding: '20px 24px',
+              marginTop: '20px',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '16px'
+            }}>
+              <div>
+                <div className="welcome-badge" style={{ marginBottom: '4px' }}>
+                  <span>PERSISTENCE &amp; SHARING</span>
                 </div>
-              )}
-            </div>
+                <h4 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '1.15rem' }}>
+                  Ready to save this journey?
+                </h4>
+                <p style={{ margin: 0, color: '#475569', fontSize: '0.88rem' }}>
+                  Store this personalized itinerary and verified Eco-Twin comparison in your collection in PostgreSQL.
+                </p>
+                {saveMessage && (
+                  <div style={{
+                    marginTop: '10px',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    color: saveStatus === 'saved' ? '#059669' : '#dc2626'
+                  }}>
+                    {saveStatus === 'saved' ? '✓ ' : '⚠️ '}{saveMessage}
+                  </div>
+                )}
+              </div>
 
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              {saveStatus === 'saved' ? (
-                <Link to="/trips" className="btn small" style={{ background: '#059669' }}>
-                  View in My Trips ↗
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  className="btn small"
-                  onClick={handleSaveTripToDatabase}
-                  disabled={saveStatus === 'saving'}
-                >
-                  {saveStatus === 'saving' ? 'Saving Journey...' : 'Save Trip to My Trips 🔖'}
-                </button>
-              )}
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                {saveStatus === 'saved' ? (
+                  <Link to="/trips" className="btn small" style={{ background: '#059669' }}>
+                    View in My Trips ↗
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn small"
+                    onClick={handleSaveTripToDatabase}
+                    disabled={saveStatus === 'saving'}
+                  >
+                    {saveStatus === 'saving' ? 'Saving Journey...' : 'Save Trip to My Trips 🔖'}
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* REAL TRAVEL DATA RESULTS (Duffel, ORS, OpenTripMap, OpenWeatherMap) */}
           {travelData && (
             <TravelResults
               travelData={travelData}
-              origin={intent.origin}
-              destination={intent.destination}
+              origin={intent?.origin}
+              destination={intent?.destination}
             />
           )}
 
+          {/* PERSISTENT REAL-TIME FOLLOW-UP CHAT BAR */}
+          <div className="assistant-followup-shell">
+            <div className="followup-header">
+              <span className="ai-sparkle-sm">✦</span>
+              <span>Ask EcoTrail AI anything in real-time:</span>
+            </div>
+            <form onSubmit={handleFollowupSubmit} className="followup-form">
+              <div className="followup-input-wrap">
+                <input
+                  ref={followupRef}
+                  type="text"
+                  className="followup-input"
+                  placeholder="Ask a follow-up or plan another destination (e.g. 'Show bus links for Goa' or '3 days in Kerala')..."
+                  value={followupPrompt}
+                  onChange={(e) => setFollowupPrompt(e.target.value)}
+                  disabled={searchState === 'loading'}
+                />
+                <button
+                  type="submit"
+                  className="btn followup-submit-btn"
+                  disabled={!followupPrompt.trim() || searchState === 'loading'}
+                >
+                  <span>Send</span>
+                  <span aria-hidden="true">✦</span>
+                </button>
+              </div>
+            </form>
+            <div className="followup-quick-chips">
+              <button type="button" onClick={() => handleQuickFollowup("What are the official train booking links?")}>
+                🚆 Official IRCTC Booking
+              </button>
+              <button type="button" onClick={() => handleQuickFollowup("Show me verified eco-friendly homestays")}>
+                🌿 Verified Eco Homestays
+              </button>
+              <button type="button" onClick={() => handleQuickFollowup("What are the local EV and public transit options?")}>
+                ⚡ State EV &amp; Bus Transit
+              </button>
+              <button type="button" onClick={() => handleQuickFollowup("Show official monument tickets and timings")}>
+                🏛️ Official ASI Tickets
+              </button>
+            </div>
+          </div>
+
           {/* Result Actions */}
-          <div className="rec-actions-bar" style={{ marginTop: '1.5rem' }}>
+          <div className="rec-actions-bar" style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center' }}>
             <button
               type="button"
               className="btn light text-btn"
