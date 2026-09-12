@@ -1,0 +1,37 @@
+# Python / Django
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+ENV/
+*.sqlite3
+db.sqlite3-journal
+
+# Environment Secrets
+.env
+.env.local
+*.key
+*.pem
+
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+vite-dev.err.log
+vite-dev.out.log
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.bak
